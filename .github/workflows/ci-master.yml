@@ -1,8 +1,10 @@
 name: CI master
 
+# Dispatch-only on this fork: every job targets upstream's self-hosted pools
+# (dsh-ubuntu-*, dsh-windows-*, vm-backup), so an automatic master push would
+# only pile up runs queued for runners that do not exist here. Dispatch it from
+# a machine that has registered the matching runner labels.
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
     inputs:
       suite:
