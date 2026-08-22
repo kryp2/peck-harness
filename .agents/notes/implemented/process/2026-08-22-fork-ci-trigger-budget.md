@@ -19,6 +19,10 @@ Automatic triggers are budgeted to what only automation can prove; everything el
 
 The same PR repairs pre-existing drift: commit `e76268ce7e` deleted `issue-lifecycle.yml` and `issue-policy.yml` but left their assertions behind, which kept this spec failing on master.
 
+## Consequences
+
+Monthly Actions spend drops by roughly the pack-proof, sandbox, and nightly-e2e share of the previous bill, at the cost of later feedback: a broken pack is discovered when cutting a release instead of on every pull request, and real-API drift is caught only when someone dispatches the suite. The `.gitleaksignore` entries are line-scoped and must be refreshed whenever an i18n sidecar regroups its records.
+
 ## Alternatives considered
 
 Path filters on the pack workflows were rejected because packaging-adjacent changes are common enough to keep burning the budget, and the proof still arrives at times when no release decision depends on it. A self-hosted runner was deferred: zero marginal minute cost, but it adds runner maintenance to a personal VM before the simpler trigger fix has been shown to be insufficient. Relying on `cancel-in-progress` alone (already present on `ci.yml`) was rejected because it bounds concurrency, not the number of paid starts.

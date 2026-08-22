@@ -19,6 +19,10 @@ Status: implemented
 
 同一个 PR 还修复了既有漂移：提交 `e76268ce7e` 删除了 `issue-lifecycle.yml` 与 `issue-policy.yml` 却留下了它们的断言，导致该 spec 自那时起在 master 上一直失败。
 
+## Consequences
+
+每月的 Actions 花费大约会下降此前账单中打包证明、沙箱与每夜 e2e 所占的份额，代价是反馈变晚：损坏的打包要在裁剪发布时才会被发现，而真实 API 的漂移只有在有人手动 dispatch 该套件时才会暴露。`.gitleaksignore` 条目是按行记录的，i18n sidecar 的记录重新分组时必须同步刷新。
+
 ## Alternatives considered
 
 为打包工作流添加路径过滤被否决：与打包相邻的变更足够常见，预算仍会被烧掉，而且证明到达的时机未必是发布决策依赖它的时机。自托管 runner 被推迟：边际分钟成本为零，但在更简单的触发修复被证明不够之前，它先给个人 VM 增加了 runner 维护负担。只依赖 `cancel-in-progress`（`ci.yml` 已具备）被否决：它约束的是并发数，而不是付费启动的次数。
