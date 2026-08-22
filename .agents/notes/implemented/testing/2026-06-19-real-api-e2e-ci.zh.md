@@ -22,13 +22,13 @@ ci.yml 的价值在于它无密钥、可 fork、始终为绿：任何贡献者�
 
 内部推理（inference）成本不是限制因素，因此工作流针对覆盖面和信号优化。它会在多种触发条件和每个受信任 PR（Pull Request）上运行所有匹配的 `*.e2e.ts` 文件，以落实 [docs/testing.md](../../../../docs/testing.zh.md) 的有密钥策略。
 
-### 触发条件：仅限可信事件
+### 触发条件：仅限手动 dispatch
 
-`workflow_dispatch` + `push` 到 `main`/`master` + 每夜 `schedule`（`17 0 * * *`，即北京时间 08:17）+ `pull_request`。push 提供合并后信号；schedule 捕捉外部 API 漂移；dispatch 是手动逃生通道；可信 PR 获得合并前门禁。该合并前信号有意接受 § 安全性中描述的更大密钥暴露面。
+`workflow_dispatch` 是唯一的触发条件。最初的设计——在 dispatch 之上叠加 `push` 到 `main`/`master`、每夜 `schedule` 以及可信 `pull_request`——已在 [fork CI 触发预算](../process/2026-08-22-fork-ci-trigger-budget.zh.md) 中退役：每一次自动运行都会消耗托管运行器分钟数和真实的 DeepSeek API 额度，而 fork 正是以这种方式耗尽了账户的包含配额。dispatch 保留了按需获取合并后、漂移捕捉与合并前信号的能力；由于不再存在 pull_request 触发，§ 安全性中描述的密钥暴露面也不会再出现。
 
 ### 不可信 PR 的门禁
 
-GitHub 对两类 PR 扣留 repo secret：来自 **fork** 的 PR，以及 **Dependabot** PR（同仓库分支，`head.repo.fork == false`，但 secret 仍被扣留）。一个 job 级 `if:` 对两者都跳过整个 job：
+历史上 GitHub 对两类 PR 扣留 repo secret：来自 **fork** 的 PR，以及 **Dependabot** PR（同仓库分支，`head.repo.fork == false`，但 secret 仍被扣留）；当时一个 job 级 `if:` 对两者都跳过整个 job：
 
 ```
 github.event_name != 'pull_request'
@@ -37,7 +37,7 @@ github.event_name != 'pull_request'
 
 Dependabot 子句基于 PR **作者**（`pull_request.user.login`）而非 `github.actor`（运行触发者）：维护者重新打开或重跑 Dependabot PR 时，`github.actor` 会变成人类，但该 PR 仍然无密钥；基于作者的判断在这种情况下依然正确。被 **job 级** `if:` 跳过的 job 报告为*成功*检查（不同于工作流/触发级跳过会保持 pending），因此如果需要将此工作流标记为 required status check 也是安全的——fork/Dependabot PR 的跳过但绿色的检查不会阻塞合并。
 
-该门禁是一个*干净跳过的便利措施*，而非 secret 的安全边界（见 § 安全性——边界是 GitHub 自身在 `pull_request` 下对 fork 的 secret 扣留机制）。没有该门禁，fork 仍然无法读取密钥；只是会遇到令人困惑的 preflight 硬失败并浪费计算资源。
+该门禁是一个*干净跳过的便利措施*，而非 secret 的安全边界（见 § 安全性——边界是 GitHub 自身在 `pull_request` 下对 fork 的 secret 扣留机制）。它随自动触发一起被删除：没有这些触发，这条死条件永远不会命中。
 
 ### Preflight：明确失败，绝不虚假报绿
 
@@ -54,7 +54,7 @@ repo secret 命名为 `DEEPSEEK_API_KEY_EXTERNAL`；映射到适配器和测试�
 
 ### 范围与运行时形态
 
-job 仅在 Node 24 上运行 `test:e2e`；无密钥门禁和版本兼容性属于主 CI 工作流。测试通过 workspace paths 映射以未构建形式运行，使用有界的可配置 worker 池、逐测试重试和 job 超时。被取代的 PR 运行会被取消，而 push 和 schedule 运行完整执行以提供合并后信号。
+job 仅在 Node 24 上运行 `test:e2e`；无密钥门禁和版本兼容性属于主 CI 工作流。测试通过 workspace paths 映射以未构建形式运行，使用有界的可配置 worker 池、逐测试重试和 job 超时。dispatch 运行总是完整执行——已不存在会被取代而需要取消的触发。
 
 DeepSeek 原生 `web_search` 探测已注册但会跳过。线上 Anthropic 兼容端点可能返回成功响应却没有结构化来源块，因此对来源存在性的正向断言不是可靠的合并信号；单元测试仍会锁定响应解析行为，但 CI 不会验证线上端点返回的来源块协议格式（wire format）。
 

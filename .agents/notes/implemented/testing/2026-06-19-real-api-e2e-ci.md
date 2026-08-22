@@ -22,13 +22,13 @@ ci.yml's value is that it is keyless, forkable, and always-green: any contributo
 
 Internal inference cost is not the limiting constraint, so the workflow optimizes for coverage and signal. It runs every matching `*.e2e.ts` file on multiple triggers and every trusted PR, implementing the [docs/testing.md](../../../../docs/testing.md) with-key policy.
 
-### Triggers: trusted events only
+### Triggers: manual dispatch only
 
-`workflow_dispatch` + `push` to `main`/`master` + nightly `schedule` (`17 0 * * *`, 08:17 Asia/Shanghai) + `pull_request`. Push gives a post-merge signal; schedule catches external-API drift; dispatch is the manual escape hatch; and trusted pull requests get a pre-merge gate. That pre-merge signal deliberately accepts the larger key-exposure surface described under § Security.
+`workflow_dispatch` is the only trigger. The original design — `push` to `main`/`master`, nightly `schedule`, and trusted `pull_request` on top of dispatch — was retired in [fork CI trigger budget](../process/2026-08-22-fork-ci-trigger-budget.md): every automatic run spends hosted-runner minutes and real DeepSeek API credits, and the fork exhausted its included Actions quota that way. Dispatch preserves the post-merge, drift-catch, and pre-merge signals on demand; the key-exposure surface described under § Security no longer arises because no pull-request trigger exists.
 
 ### The untrusted-PR gate
 
-GitHub withholds repo secrets from two kinds of PR: those from **forks**, and **Dependabot** PRs (same-repo branch, so `head.repo.fork == false`, but secrets are still withheld). A job-level `if:` skips the whole job for both:
+Historically GitHub withheld repo secrets from two kinds of PR: those from **forks**, and **Dependabot** PRs (same-repo branch, so `head.repo.fork == false`, but secrets are still withheld), and a job-level `if:` skipped the whole job for both:
 
 ```
 github.event_name != 'pull_request'
@@ -37,7 +37,7 @@ github.event_name != 'pull_request'
 
 The Dependabot clause keys on the PR **author** (`pull_request.user.login`), not `github.actor` (the run trigger): a maintainer who reopens or re-runs a Dependabot PR would make `github.actor` a human while the PR is still keyless, and an author-based test stays correct across that. A job skipped by a **job-level** `if:` reports as a *successful* check (unlike a workflow/trigger-level skip, which stays pending), so this workflow is safe to mark as a required status check if desired — a fork/Dependabot PR's skipped-but-green check does not block the merge.
 
-The gate is a *clean-skip nicety*, not the secret's security boundary (see § Security — the boundary is GitHub's own fork-secret withholding under `pull_request`). Without the gate, forks still could not read the key; they would just hit a confusing preflight hard-fail and waste compute.
+The gate was a *clean-skip nicety*, not the secret's security boundary (see § Security — the boundary is GitHub's own fork-secret withholding under `pull_request`). It was deleted together with the automatic triggers: without them the dead condition could never fire.
 
 ### Preflight: fail loud, never false-green
 
@@ -54,7 +54,7 @@ The repo secret is named `DEEPSEEK_API_KEY_EXTERNAL`; it is mapped to the `DEEPS
 
 ### Scope, runtime shape
 
-The job runs only `test:e2e` on Node 24; keyless gates and version compatibility belong to the main CI workflow. Tests run unbuilt through the workspace paths map with a bounded configurable worker pool, per-test retries, and a job timeout. Superseded PR runs are cancelled, while push and scheduled runs complete for post-merge signal.
+The job runs only `test:e2e` on Node 24; keyless gates and version compatibility belong to the main CI workflow. Tests run unbuilt through the workspace paths map with a bounded configurable worker pool, per-test retries, and a job timeout. Dispatched runs always run to completion — there is no superseding trigger left to cancel them.
 
 The DeepSeek native `web_search` probe is registered but skipped. The live Anthropic-compatible endpoint can return a successful response without structured source blocks, so its positive-source assertion is not a reliable merge signal; unit coverage still pins response parsing, but CI does not prove the live source-block wire shape.
 

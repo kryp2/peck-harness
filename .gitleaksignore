@@ -1,0 +1,4 @@
+# i18n sidecars carry git blob hashes (40-hex) that trip generic-api-key.
+# Line numbers shift with edits above the records; update on regrouping.
+.agents/notes/implemented/testing/2026-06-19-real-api-e2e-ci.i18n.yaml:generic-api-key:5
+.agents/notes/implemented/testing/2026-06-19-real-api-e2e-ci.i18n.yaml:generic-api-key:6
