@@ -2,15 +2,15 @@
 # entries, all on one version. The vendored framework and the native packages are
 # separate sequences with their own workflows and version lines.
 #
-# Pack runs without credentials on every pull request and master push, so a
-# pull request proves the whole publish set still packs. Publication is a manual
-# workflow_dispatch of release-publish.yml from a dsh-v* tag.
+# Pack runs without credentials from a dsh-v* tag push or a manual dispatch, so
+# the whole publish set is proven exactly when a release is being cut.
+# Publication is a manual workflow_dispatch of release-publish.yml from the same
+# tag.
 name: Release (dsh)
 
 on:
-  pull_request:
   push:
-    branches: [master]
+    tags: ['dsh-v*']
   workflow_dispatch:
 
 permissions:

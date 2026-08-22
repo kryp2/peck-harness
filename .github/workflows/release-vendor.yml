@@ -2,16 +2,15 @@
 # vendor/, each on its own version line. This sequence releases independently of
 # dsh and of the native packages.
 #
-# Pack runs without credentials on every pull request and master push.
-# Publication is a manual workflow_dispatch of release-vendor-publish.yml from a
-# vendor-* tag; a vendor release can carry several versions, so each package has
+# Pack runs without credentials from a vendor-* tag push or a manual dispatch.
+# Publication is a manual workflow_dispatch of release-vendor-publish.yml from
+# the same tag; a vendor release can carry several versions, so each package has
 # its own tag.
 name: Release (vendor)
 
 on:
-  pull_request:
   push:
-    branches: [master]
+    tags: ['vendor-*']
   workflow_dispatch:
 
 permissions:
