@@ -710,6 +710,45 @@ export interface Config {
 
 Source: [`packages/goal/goal/src/index.ts:116`](../packages/goal/goal/src/index.ts)
 
+<a id="deepseek-aidsh-guard-deployment-refusal"></a>
+
+## `@deepseek-ai/dsh-guard-deployment-refusal`
+
+```ts config-catalog
+/** Plugin config: the operator's declared deployment facts. */
+export interface Config {
+  /**
+   * Declared reachability of this deployment's serving socket.
+   * @default 'loopback-only'
+   */
+  exposure?: DeploymentExposure
+  /**
+   * Application-authentication mechanism present for API requests. Absent
+   * authentication is declared explicitly; there is no detection fallback.
+   * @default 'none'
+   */
+  authKind?: ApplicationAuthKind
+}
+
+/**
+ * Declared reachability of this process's serving socket. This is a claim
+ * about who can connect — through bridges and proxies included — not about
+ * the local bind address: a loopback-bound process fronted by socat/WireGuard
+ * or any external forwarder is `'remote-declared'`.
+ */
+export type DeploymentExposure = 'loopback-only' | 'remote-declared'
+
+/**
+ * Application-authentication mechanism composed in front of the API surface.
+ * Only a mechanism that rejects unauthenticated requests counts;
+ * `trustedHosts`/Host/Origin fencing is not authentication and must be
+ * declared as `'none'`.
+ */
+export type ApplicationAuthKind = 'none' | 'token'
+```
+
+Source: [`packages/guard/deployment-refusal/src/index.ts:59`](../packages/guard/deployment-refusal/src/index.ts)
+
 <a id="deepseek-aidsh-headless"></a>
 
 ## `@deepseek-ai/dsh-headless`
