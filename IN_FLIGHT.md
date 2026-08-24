@@ -6,6 +6,7 @@ _Sist oppdatert: 2026-08-24 (audit-batch: 4 PR-er merget, #13–#16)_
 - CI-status etter merge: static/coverage/snapshots/windows-native er fortsatt røde på master, men feilene er **baseline-gjeld, ikke fra denne batchen** (unntatt: coverage-jobben er nå GRØNN etter #15).
 
 ## Neste
+- Topologiforslag for hostet flerbruker (wallet-login + sandbox-per-bruker + llm.peck.to-måling): `.agents/notes/proposed/architecture/2026-08-24-hosted-multi-user-topology.md` — fase 1 = betalt kanary på denne toppologien; lokal workspace-bro er eksplisitt fase 2.
 - Gjenstår fra auditen: P0 WireGuard-flaten (app-auth/preflight-nekt ved non-loopback + danger-full-access), receipt-signaturverifisering + kanonisering før paid canary, first-answer-wins racing-registry i user-questions, deploy-manifest + preflight/rollback, Peck composition layer.
 - CI-baseline-gjeld: 9 lint-feil (receipt.spec ×4, translate.spec ×1, user-questions ×2, inbox.ts no-unnecessary-condition); `hmr-live.e2e` feiler i runner; windows-native meta-test (`scripts/ci-workflow.spec.ts`) strider med PR #12 sitt dispatch-only-valg; coverage-debt i llm-claude-cli/session-metered-receipt/user-questions.
 
