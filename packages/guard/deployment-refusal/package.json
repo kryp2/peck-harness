@@ -2,7 +2,14 @@
   "name": "@deepseek-ai/dsh-guard-deployment-refusal",
   "version": "0.1.1-rc.2",
   "description": "Deployment refusal guard plugin: fails startup before readiness when a declared remote deployment combines absent application authentication with the danger-full-access permission preset",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/guard/deployment-refusal"
+  },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -27,6 +34,7 @@
     "clean": "rimraf lib tsconfig.tsbuildinfo",
     "test": "vitest run"
   },
+  "license": "MIT",
   "dependencies": {
     "@deepseek-ai/schemastery": "workspace:^"
   },
