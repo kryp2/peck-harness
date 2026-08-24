@@ -141,6 +141,8 @@ function detectToolCalls(text: string, tools: readonly ToolSchema[] | undefined)
   let counter = 0
   for (const match of text.matchAll(fenceRe)) {
     const body = match[1]?.trim()
+    /* v8 ignore next -- fenceRe's capture group always participates in a successful match, so match[1] is never undefined at runtime;
+     * the guard only satisfies noUncheckedIndexedAccess typing. */
     if (body === undefined) continue
     let parsed: unknown
     try {

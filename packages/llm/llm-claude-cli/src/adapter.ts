@@ -148,13 +148,16 @@ export class ClaudeCliAdapter extends LlmAdapter {
       }
       // Hard-kill fallback in case Claude Code is mid-tool-call and ignores
       // SIGTERM. 5s is enough for a graceful shutdown of an in-process CLI.
+      /* v8 ignore next 8 -- delay() has no AbortSignal to reject with and the SIGKILL call is contained by its inner try, so the trailing
+       * rejection guard cannot execute; it stays as defense for future edits of this callback. */
       void delay(5_000).then(() => {
         try {
           child.kill('SIGKILL')
         } catch {
           // Already gone.
         }
-      }).catch(() => undefined)
+      })
+        .catch(() => undefined)
     }
     upstream.addEventListener('abort', onAbort, { once: true })
 
