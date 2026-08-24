@@ -44,8 +44,8 @@ declare module '@deepseek-ai/cordis' {
 
 /** Registry and cross-page router behind the two model-facing inspect tools. */
 export class CordisInspectRegistryService extends Service {
-  private readonly providers = new Map<string, HostCordisInspectProviderRegistration>()
-  private readonly refs = new Map<string, number>()
+  /** Live registrations per manifest id, oldest first; the last entry serves queries. */
+  private readonly providers = new Map<string, HostCordisInspectProviderRegistration[]>()
   private readonly pending = new Map<CordisInspectRequestId, PendingClientQuery>()
   private clientManifest: readonly CordisInspectProviderManifest[] | undefined
   private nextRequest = 1
@@ -61,35 +61,29 @@ export class CordisInspectRegistryService extends Service {
    * Idempotent per manifest id: `tool-cordis` registers the same first-party
    * providers (`Service`, `Event`, `Builtin`, `Tool`) from every coding preset
    * in which it is mounted (the shipped `cordis` preset and the forks that copy
-   * it), and the registry is process-global. The first mount owns the entry;
-   * each later mount of an identical id takes a reference and a disposer that
-   * only evicts the shared entry when its last holder disposes, so mounting a
-   * second preset no longer fails session creation with "already registered".
+   * it), and the registry is process-global. Each mount stores its own
+   * registration behind the shared id and receives a disposer that removes
+   * exactly that entry, so mounting a second preset no longer fails session
+   * creation with "already registered". Queries and `list()` views resolve to
+   * the most recently registered live entry and fall back to earlier entries
+   * when that holder disposes, so a shared id always executes a handler whose
+   * owning context is still mounted.
    * @param registration - manifest and local query handler.
-   * @returns disposer releasing this mount's reference to the provider.
+   * @returns disposer removing this mount's registration.
    */
   register(registration: HostCordisInspectProviderRegistration): () => void {
     const manifest = validateManifest(registration.manifest)
-    const held = this.refs.get(manifest.id) ?? 0
-    if (held > 0) {
-      this.refs.set(manifest.id, held + 1)
-      return () => this.release(manifest.id)
-    }
     const stored = { ...registration, manifest }
-    this.providers.set(manifest.id, stored)
-    this.refs.set(manifest.id, 1)
-    return () => this.release(manifest.id)
-  }
-
-  /** Drop one reference and evict the entry when no holder remains. */
-  private release(id: string): void {
-    const held = this.refs.get(id)
-    if (held === undefined) return
-    if (held <= 1) {
-      this.refs.delete(id)
-      this.providers.delete(id)
-    } else {
-      this.refs.set(id, held - 1)
+    const entries = this.providers.get(manifest.id)
+    if (entries === undefined) this.providers.set(manifest.id, [stored])
+    else entries.push(stored)
+    return () => {
+      const current = this.providers.get(manifest.id)
+      if (current === undefined) return
+      const index = current.indexOf(stored)
+      if (index < 0) return
+      if (current.length === 1) this.providers.delete(manifest.id)
+      else current.splice(index, 1)
     }
   }
 
@@ -114,7 +108,10 @@ export class CordisInspectRegistryService extends Service {
    */
   list(): CordisInspectProviderView[] {
     return [
-      ...[...this.providers.values()].map(provider => view('host', provider.manifest)),
+      // Entry lists are never empty: register() seeds them and each disposer
+      // removes exactly its own entry.
+      ...[...this.providers.values()]
+        .map(entries => view('host', (entries.at(-1) as HostCordisInspectProviderRegistration).manifest)),
       ...(this.clientManifest ?? []).map(provider => view('client', provider)),
     ]
   }
@@ -138,7 +135,7 @@ export class CordisInspectRegistryService extends Service {
     signal: AbortSignal,
   ): Promise<JsonValue> {
     if (platform === 'host') {
-      const registration = this.providers.get(providerId)
+      const registration = this.providers.get(providerId)?.at(-1)
       if (registration === undefined) throw new Error(`Host Cordis inspect provider "${providerId}" is not registered`)
       const method = findMethod(registration.manifest, methodName)
       validateInput('Host', providerId, method, input)
