@@ -1,9 +1,10 @@
 /**
- * @deepseek-ai/dsh-telegram-answerer — an opt-in answerer on the `ctx.userQuestions`
- * waterfall that asks the human over Telegram. It coexists with the web-GUI answerer:
- * a question dispatched by `ask_user_question` is posted to Telegram with tap-selectable
- * inline buttons (when options are present) and free-text replies; the first answerer to
- * answer wins the waterfall.
+ * @deepseek-ai/dsh-telegram-answerer — an opt-in answerer racing on the `ctx.userQuestions`
+ * `'user-questions/ask'` event that asks the human over Telegram. It coexists with the
+ * web-GUI answerer: a question dispatched by `ask_user_question` is delivered to every
+ * composed channel at the same time and posted to Telegram with tap-selectable inline
+ * buttons (when options are present) and free-text replies; the first channel to answer
+ * settles the ask, and this attempt is cancelled with its race signal when another wins.
  *
  * Transport is the Telegram Bot API over `ctx.shell` (curl); the tokened URL travels in
  * the command environment, never in argv. Credentials are read per operation from the
@@ -15,6 +16,16 @@
  * button presses are accepted only when they reference the message this ask sent. Asks
  * are serialized, so two concurrent questions never interleave sends and polls.
  *
+ * A lost race (or a caller abort) aborts the attempt's race signal: an in-flight
+ * long-poll stops at the next loop turn — the running curl is killed through its own
+ * signal — and, when the question was already posted and another channel answered,
+ * each sent message is edited best-effort to append "(answered elsewhere)". The edit
+ * never throws into the winner path; on any other loss (caller abort, host teardown)
+ * the sent message is left as-is rather than claiming an answer that did not happen.
+ * Channel-internal failures (unconfigured credentials, transport errors, timeout)
+ * resolve `undefined`, declining the race so other channels can still answer; only a
+ * composition where no channel claims produces the fail-closed `NO_ANSWERER`.
+ *
  * @module @deepseek-ai/dsh-telegram-answerer
  */
 
@@ -25,6 +36,7 @@ import type {
   AskUserQuestionItem,
   AskUserQuestionRequest,
 } from '@deepseek-ai/dsh-user-questions'
+import { UserQuestionError } from '@deepseek-ai/dsh-user-questions'
 import '@deepseek-ai/dsh-user-questions'
 import type { ShellExecutor, ShellExecRequest, ShellRunResult } from '@deepseek-ai/dsh-shell'
 import type { CredentialProvider } from '@deepseek-ai/dsh-credentials'
@@ -63,10 +75,12 @@ interface BotSession {
   cursor?: number
 }
 
-/** The identity of one sent question message, for reply correlation. */
+/** The identity and text of one sent question message, for reply correlation and loser edits. */
 interface SentQuestion {
   /** `message_id` of the message this ask posted, as Telegram returned it. */
   messageId: string
+  /** Exact text the message was sent with; `editMessageText` replaces the whole text. */
+  text: string
 }
 
 /** One raw `getUpdates` entry subset this answerer consumes. */
@@ -175,14 +189,20 @@ async function resolveConfig(credentials: CredentialProvider): Promise<TelegramC
   return { token: token.value, chatId: chatId.value }
 }
 
+/** Marker appended to a sent question when another channel answered it first. */
+const ANSWERED_ELSEWHERE = '(answered elsewhere)'
+
 /**
  * Run one Telegram Bot API call through curl and decode its envelope. The tokened URL
  * reaches curl through {@link URL_ENV_VAR}, never through the command line; a non-ok
  * envelope, unparseable output, or failed transport throws so callers fail closed.
+ * When `signal` is supplied it rides the shell request, so a cancelled attempt kills
+ * the running curl instead of waiting out its `-m` ceiling.
  * @param shell - the shell executor.
  * @param config - the resolved telegram credentials.
  * @param pathAndQuery - method path plus query string, e.g. `getUpdates?offset=-1`.
  * @param body - JSON request body to post, or undefined for a plain GET.
+ * @param signal - cancellation signal forwarded to the shell run, or undefined.
  * @returns the decoded `ok: true` envelope.
  */
 async function telegramFetch(
@@ -190,6 +210,7 @@ async function telegramFetch(
   config: TelegramConfig,
   pathAndQuery: string,
   body: Record<string, unknown> | undefined,
+  signal?: AbortSignal,
 ): Promise<TelegramEnvelope> {
   const url = `${API}/bot${config.token}/${pathAndQuery}`
   const command = body === undefined
@@ -198,6 +219,7 @@ async function telegramFetch(
   const request: ShellExecRequest = {
     command,
     env: { [URL_ENV_VAR]: url },
+    ...(signal === undefined ? {} : { signal }),
     ...(body === undefined ? {} : { stdin: JSON.stringify(body) }),
   }
   const result = await shell.run(shell.resolve(request))
@@ -244,15 +266,16 @@ async function establishCursor(shell: ShellExecutor, config: TelegramConfig, bot
 
 /**
  * Post one question to Telegram, with inline buttons when options are present, and
- * return the sent message's id for reply correlation. The text carries the nonce so a
- * human-visible reference exists for the binding the callback data enforces.
+ * return the sent message's identity for reply correlation and loser edits. The text
+ * carries the nonce so a human-visible reference exists for the binding the callback
+ * data enforces.
  * @param shell - the shell executor.
  * @param config - the resolved telegram credentials.
  * @param question - the question to post.
  * @param index - zero-based batch position.
  * @param total - batch size.
  * @param nonce - unpredictable per-question value embedded in text and callbacks.
- * @returns the sent message's `message_id`, as a string.
+ * @returns the sent message's `message_id` and exact text, as strings.
  */
 async function sendQuestion(
   shell: ShellExecutor,
@@ -261,11 +284,9 @@ async function sendQuestion(
   index: number,
   total: number,
   nonce: string,
-): Promise<string> {
-  const body: Record<string, unknown> = {
-    chat_id: config.chatId,
-    text: `🤖 ${formatQuestion(question, index, total)}\n\n(q:${nonce})`,
-  }
+): Promise<SentQuestion> {
+  const text = `🤖 ${formatQuestion(question, index, total)}\n\n(q:${nonce})`
+  const body: Record<string, unknown> = { chat_id: config.chatId, text }
   const keyboard = keyboardFor(question, nonce)
   if (keyboard !== undefined) body.reply_markup = keyboard
   const decoded = await telegramFetch(shell, config, 'sendMessage', body)
@@ -273,24 +294,26 @@ async function sendQuestion(
     ? decoded.result as { message_id?: string | number }
     : undefined
   if (sent?.message_id === undefined) throw new Error('Telegram sendMessage returned no message id')
-  return String(sent.message_id)
+  return { messageId: String(sent.message_id), text }
 }
 
 /**
- * Long-poll `getUpdates` until a reply from the authorized chat arrives or the ceiling
- * elapses. The bot session's cursor persists across polls and asks, so once the drain
- * has run no pre-question update is ever delivered again. Callback presses must
- * reference the sent message's id — a stale press on an earlier question's keyboard is
- * ignored. Free-text replies are accepted from the authorized chat: after the drain
- * only updates newer than the question can arrive. Abort is not observed here: the
- * user-questions service races the caller's signal against the whole dispatch and
- * settles `ASK_ABORTED` itself, so the poll only needs its own deadline.
+ * Long-poll `getUpdates` until a reply from the authorized chat arrives, the ceiling
+ * elapses, or the attempt is cancelled. The bot session's cursor persists across polls
+ * and asks, so once the drain has run no pre-question update is ever delivered again.
+ * Callback presses must reference the sent message's id — a stale press on an earlier
+ * question's keyboard is ignored. Free-text replies are accepted from the authorized
+ * chat: after the drain only updates newer than the question can arrive. Cancellation
+ * is observed promptly: an aborted `signal` ends the wait at the next loop turn, and
+ * the signal rides each curl so an in-flight long-poll is killed instead of waiting
+ * out its transport timeout; the caller then treats the attempt as declined.
  * @param shell - the shell executor.
  * @param config - the resolved telegram credentials.
  * @param bot - the serialized bot session owning the update cursor.
  * @param expected - the sent message this poll's replies must correlate to.
  * @param timeoutMs - a hard ceiling for the whole wait; exceeded means no answer.
- * @returns the reply, or undefined.
+ * @param signal - race signal for this attempt; aborted means the outcome no longer matters.
+ * @returns the reply, or undefined when the deadline or cancellation ended the wait.
  */
 async function pollReply(
   shell: ShellExecutor,
@@ -298,16 +321,24 @@ async function pollReply(
   bot: BotSession,
   expected: SentQuestion,
   timeoutMs: number,
+  signal: AbortSignal,
 ): Promise<Reply | undefined> {
   const deadline = Date.now() + timeoutMs
-  while (true) {
+  // Indirection on purpose: reading through the loop condition narrows
+  // `signal.aborted` for the rest of the body, while an abort can land at any
+  // await point inside it.
+  const cancelled = (): boolean => signal.aborted
+  while (!cancelled()) {
     if (Date.now() > deadline) return undefined
     let decoded: TelegramEnvelope
     try {
       const query = bot.cursor === undefined ? 'getUpdates?timeout=25' : `getUpdates?timeout=25&offset=${bot.cursor}`
-      decoded = await telegramFetch(shell, config, query, undefined)
+      decoded = await telegramFetch(shell, config, query, undefined, signal)
     } catch {
-      // Transient transport or Telegram-side failure: keep waiting until the ceiling.
+      // Transient transport or Telegram-side failure — or the cancellation that
+      // killed the running curl. Either way stop waiting on an aborted attempt;
+      // otherwise back off and keep waiting until the ceiling.
+      if (cancelled()) return undefined
       await new Promise(resolve => setTimeout(resolve, 1000))
       continue
     }
@@ -331,13 +362,39 @@ async function pollReply(
       if (message.text !== undefined && message.text.length > 0) return { kind: 'text', value: message.text }
     }
   }
+  return undefined
 }
 
 /**
- * Register a Telegram answerer on the `user-questions/ask` waterfall. When Telegram is
- * unconfigured or unreachable the answerer falls through so another answerer can answer.
- * Asks are serialized behind one queue: a later question waits for the earlier ask to
- * settle, so two concurrent asks never interleave sends and polls against one chat.
+ * Edit every message this attempt sent, appending the answered-elsewhere marker.
+ * Best-effort by design: each edit runs detached and a failed or rejected edit is
+ * swallowed (named here) so loser cleanup can never throw into the winner path —
+ * a stale unedited question is the accepted fallback.
+ * @param shell - the shell executor.
+ * @param config - the resolved telegram credentials.
+ * @param sent - the messages the lost attempt posted, in send order.
+ */
+function markAnsweredElsewhere(shell: ShellExecutor, config: TelegramConfig, sent: readonly SentQuestion[]): void {
+  for (const message of sent) {
+    const edit = telegramFetch(shell, config, 'editMessageText', {
+      chat_id: config.chatId,
+      message_id: message.messageId,
+      text: `${message.text}\n\n${ANSWERED_ELSEWHERE}`,
+    })
+    // Swallowed on purpose: the question was already answered elsewhere; an
+    // unreachable edit only leaves the older text visible in the chat.
+    edit.catch(() => {})
+  }
+}
+
+/**
+ * Register a Telegram answerer on the `user-questions/ask` racing event. When Telegram
+ * is unconfigured or unreachable the attempt resolves `undefined`, declining so another
+ * answerer can answer; with no claiming channel at all the service fails closed. Asks
+ * are serialized behind one queue: a later question waits for the earlier ask to settle,
+ * so two concurrent asks never interleave sends and polls against one chat. An attempt
+ * whose race signal is already aborted when its queue turn arrives skips without
+ * touching Telegram; a signal aborting mid-poll stops the poll promptly.
  * @param ctx - Cordis context; reads `shell` and `credentials` optionally.
  * @param config - plugin config (timeout ceiling).
  */
@@ -349,25 +406,51 @@ export function apply(ctx: Context, config: Config = {}): void {
   const bot: BotSession = {}
   let tail: Promise<unknown> = Promise.resolve()
 
-  ctx.on('user-questions/ask', (request: AskUserQuestionRequest, next) => {
-    const attempt = tail.catch(() => {}).then(async (): Promise<AskUserQuestionAnswer> => {
+  ctx.on('user-questions/ask', (request: AskUserQuestionRequest, race: AbortSignal) => {
+    // Single cancellation probe on purpose: reading the property directly lets
+    // control-flow narrowing freeze it after the first check, while an abort
+    // can land at any await point of the serialized attempt.
+    const cancelled = (): boolean => race.aborted
+    const attempt = tail.catch(() => {}).then(async (): Promise<AskUserQuestionAnswer | undefined> => {
+      // Cancelled while queued behind an earlier ask: leave without touching Telegram.
+      if (cancelled()) return undefined
       const telegram = await resolveConfig(credentials)
-      if (telegram === undefined) throw new Error('Telegram not configured')
+      if (telegram === undefined) return undefined
       await establishCursor(shell, telegram, bot)
       const answers: AnswerItem[] = []
+      const sentQuestions: SentQuestion[] = []
+      // Set only when every question of the batch was answered. The winner must
+      // never edit its own messages even though settling the race aborts its
+      // signal too — the flag makes that independent of microtask ordering, and
+      // the indirection keeps control-flow narrowing from hiding it.
+      let claimed = false
+      const hasClaimed = (): boolean => claimed
       let index = 0
-      for (const question of request.questions) {
-        const nonce = randomUUID().replace(/-/g, '').slice(0, 8)
-        const sent: SentQuestion = { messageId: await sendQuestion(shell, telegram, question, index, request.questions.length, nonce) }
-        const reply = await pollReply(shell, telegram, bot, sent, ceilingMs)
-        if (reply === undefined) throw new Error('Telegram answer timed out')
-        answers.push(answerItemFor(reply, question))
-        index += 1
+      try {
+        for (const question of request.questions) {
+          const nonce = randomUUID().replace(/-/g, '').slice(0, 8)
+          const sent = await sendQuestion(shell, telegram, question, index, request.questions.length, nonce)
+          sentQuestions.push(sent)
+          const reply = await pollReply(shell, telegram, bot, sent, ceilingMs, race)
+          if (reply === undefined) return undefined
+          answers.push(answerItemFor(reply, question))
+          index += 1
+        }
+        claimed = true
+        return { answers }
+      } finally {
+        // Loser cleanup for a posted-but-unchosen batch: only a SUPERSEDED loss
+        // may claim "answered elsewhere"; a caller abort or teardown leaves the
+        // messages untouched because no other channel did answer them.
+        const reason: unknown = race.reason
+        if (!hasClaimed() && cancelled() && reason instanceof UserQuestionError && reason.code === 'SUPERSEDED') {
+          markAnsweredElsewhere(shell, telegram, sentQuestions)
+        }
       }
-      return { answers }
     })
     tail = attempt
-    // Claim the question on success; on any failure fall through to the next answerer.
-    return attempt.catch(() => next())
+    // Claim the question on success; decline (`undefined`) on any failure so the
+    // remaining channels keep racing.
+    return attempt
   })
 }

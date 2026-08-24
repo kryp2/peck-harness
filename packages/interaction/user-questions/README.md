@@ -8,8 +8,18 @@ User-interaction Service Definition. It owns `ctx.userQuestions`, the service a 
 
 ### Public API
 
-- `ctx.userQuestions.registerProvider(provider): () => void` Register the UI-side provider. Only one provider may be active in a context; disposal unregisters it.
-- `ctx.userQuestions.ask(request): Promise<AskUserQuestionAnswer>` Ask the active provider and wait for the answer.
+- `ctx.userQuestions.ask(request): Promise<AskUserQuestionAnswer>` Ask every composed answerer at the same time and resolve with the first claimed answer.
+- `ctx.userQuestions.registerProvider(provider): () => void` Legacy shim that registers a provider as one `'user-questions/ask'` listener. New answerers register on the event directly (`ctx.on('user-questions/ask', ...)`).
+
+### Multi-channel racing
+
+Answerers compose on the `'user-questions/ask'` event; `ask()` invokes all of them concurrently with the same request and one shared race signal (true racing — registration order decides nothing):
+
+- Resolve with an answer to **claim** the question. The first settlement wins exactly once.
+- Resolve `undefined` to **decline** — the channel cannot or will not answer (unconfigured, transport failed, superseded), and the ask stays open for the other attempts.
+- Reject only to report an **authoritative failure** in the seam's error taxonomy (`UserQuestionError`). That settles the whole ask for every channel: a channel speaking this vocabulary asserts a terminal state, such as the web GUI's "the user cancelled" — which must reach the caller rather than fall through to a slower channel. Any other rejection is treated as a channel failure (a decline).
+
+When no attempt is composed, or every attempt declined or failed as a channel, `ask()` rejects with `NO_ANSWERER` (fail closed). A losing attempt observes its race signal aborted with a `UserQuestionError` reason naming why: `SUPERSEDED` when another answerer claimed first, or the caller's own `ASK_ABORTED` error after a turn cancel. Late settlements after the ask has settled are discarded idempotently.
 
 ### Key Types
 
@@ -18,11 +28,12 @@ User-interaction Service Definition. It owns `ctx.userQuestions`, the service a 
 - `AskUserQuestionIntent` — `{ kind: 'plan-review', approve }`; the tagged presentation intent below.
 - `AskUserQuestionAnswer` — `{ answers: [{ id, selected, custom? }] }`.
 - `UserQuestionProvider` — UI implementation with `ask(request)`.
-- `UserQuestionError` — `HarnessError` subclass with codes such as `EMPTY_QUESTIONS`, `BAD_INTENT`, `NO_PROVIDER`, `DUPLICATE_PROVIDER`, `ASK_ABORTED`, `CALLER_NOT_LIVE`, and `DELEGATED_CALLER`.
+- `UserQuestionAttempt` — one racing listener: `(request, signal) => Promise<AskUserQuestionAnswer | undefined>` under the claim/decline/authoritative contract above.
+- `UserQuestionError` — `HarnessError` subclass with codes such as `EMPTY_QUESTIONS`, `BAD_INTENT`, `NO_ANSWERER`, `ASK_ABORTED`, `ASK_CANCELLED`, `ASK_MISSING_AGENT`, `SUPERSEDED`, `CALLER_NOT_LIVE`, and `DELEGATED_CALLER`.
 
 For a single-select question, `custom` overrides the selected choice and `selected` is empty. For a multi-select question, `custom` may supplement the labels in `selected`. A UI may preserve a skipped item as `{ id, selected: [] }`, keeping the existing answer shape while retaining other answers in the batch.
 
-When a request carries an agent, `ask()` authenticates its exact identity through the live `AgentRegistry` and admits only a runtime root. Durable lineage is not authority: a session with historical delegation depth may ask after it is resumed as a new runtime root, while a live child owned by another agent is rejected even if its durable depth is zero. Agentless programmatic requests retain the existing provider path.
+When a request carries an agent, `ask()` authenticates its exact identity through the live `AgentRegistry` and admits only a runtime root. Durable lineage is not authority: a session with historical delegation depth may ask after it is resumed as a new runtime root, while a live child owned by another agent is rejected even if its durable depth is zero. Agentless programmatic requests keep the same racing path without agent-scoped filtering.
 
 ### Presentation intent
 
@@ -30,11 +41,11 @@ When a request carries an agent, `ask()` authenticates its exact identity throug
 
 ## Role
 
-This is the Service Definition package. Consumers such as `@deepseek-ai/dsh-tool-ask-user` depend on this service; the Web host runtime supplies the shipped Service Provider. The loop stays unchanged: a tool call awaits a promise, and the tool result resumes the normal agent loop.
+This is the Service Definition package. Consumers such as `@deepseek-ai/dsh-tool-ask-user` depend on this service; the Web host runtime supplies the shipped web-GUI answerer, and opt-in channels such as `@deepseek-ai/dsh-telegram-answerer` compose alongside it. The loop stays unchanged: a tool call awaits a promise, and the tool result resumes the normal agent loop.
 
 ## Model Experience
 
-Indirectly, through `dsh-tool-ask-user`, which retains a successful provider answer as compact JSON or one of these failures: `Error: ask_user_question was aborted before the user answered`, `Error: ask_user_question requires at least one question`, `Error: human interaction requires the exact live calling agent when an agent is supplied`, `Error: human interaction is unavailable while the calling agent is owned by another live agent; include the unresolved question or decision in the child agent's final result`, `Error: no user-questions provider is registered`, or `Error: <message>`. Waiting for the human adds no tokens.
+Indirectly, through `dsh-tool-ask-user`, which retains a successful provider answer as compact JSON or one of these failures: `Error: ask_user_question was aborted before the user answered`, `Error: ask_user_question requires at least one question`, `Error: human interaction requires the exact live calling agent when an agent is supplied`, `Error: human interaction is unavailable while the calling agent is owned by another live agent; include the unresolved question or decision in the child agent's final result`, `Error: no user-questions answerer is composed`, or `Error: <message>`. Waiting for the human adds no tokens.
 
 #### KV Cache effect
 
@@ -42,5 +53,5 @@ No direct invalidation; the named consumer owns any request-prefix changes.
 
 ## Known Limitations and Deferred Work
 
-- **One provider per context** — there is no routing or fan-out to multiple UIs; a second registration throws `DUPLICATE_PROVIDER`, and with none registered `ask()` throws `NO_PROVIDER` rather than degrading.
+- **Decline carries no detail** — a channel failing internally resolves `undefined`, so its diagnostic never reaches the caller; only the aggregated `NO_ANSWERER` (or an authoritative taxonomy error) does.
 - **The vocabulary is the question-form shape only** — selectable options plus optional custom text; richer interaction shapes (file pickers, diff-preview confirmations) have no seam vocabulary yet.

@@ -15,7 +15,7 @@ export const name = 'telegram-answerer-invariant'
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: the answerer observes the user-questions waterfall and posts
+ * No runtime invariant: the answerer observes the user-questions racing event and posts
  * outward to Telegram; it publishes no independent request/answer audit stream of its own.
  */
 const install: InvariantInstaller = () => {}

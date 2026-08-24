@@ -107,13 +107,14 @@ function shellResult(over: Partial<ShellRunResult> = {}): ShellRunResult {
 }
 
 /** Which Bot API call one resolved spec represents, judged by the env-carried URL. */
-type CallKind = 'send' | 'drain-probe' | 'poll'
+type CallKind = 'send' | 'drain-probe' | 'edit' | 'poll'
 
 const kindOf = (spec: ShellExecSpec): CallKind => {
   const url = spec.env?.TELEGRAM_BOT_URL ?? ''
   return url.includes('/sendMessage') ? 'send'
-    : url.includes('offset=-1') ? 'drain-probe'
-      : 'poll'
+    : url.includes('/editMessageText') ? 'edit'
+      : url.includes('offset=-1') ? 'drain-probe'
+        : 'poll'
 }
 
 const sendOk = (messageId: number): string => JSON.stringify({ ok: true, result: { message_id: messageId } })
@@ -556,5 +557,99 @@ describe('telegram-answerer wired answer path', () => {
 
     expect(answer).toEqual({ answers: [{ id: 'q', selected: ['A'] }] })
     expect(polls).toBe(2)
+  })
+})
+
+describe('telegram-answerer under racing', () => {
+  /** Wire the answerer with a poll that blocks until its curl signal (or a gate) fires. */
+  async function wiredBlockingPoll(
+    config: { timeoutMs?: number } = {},
+  ): Promise<{ ctx: Context; specs: ShellExecSpec[]; polls: (() => void)[] }> {
+    const releases: (() => void)[] = []
+    const { ctx, specs } = await wired(async (kind, spec) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      // The shell kills the running curl when its request signal fires.
+      return await new Promise<ShellRunResult>((resolve) => {
+        const release = (): void => { resolve(shellResult({ stdout: { text: '', truncated: false } })) }
+        releases.push(release)
+        spec.signal?.addEventListener('abort', release, { once: true })
+      })
+    }, config)
+    return { ctx, specs, polls: releases }
+  }
+
+  it('stops polling and marks the sent question answered elsewhere when another channel wins', async () => {
+    const { ctx, specs } = await wiredBlockingPoll()
+    let claim!: () => void
+    const claimed = new Promise<void>((resolve) => { claim = resolve })
+    void ctx.on('user-questions/ask', () => claimed.then(() => ({ answers: [{ id: 'q', selected: ['Web'] }] })))
+
+    const asked = ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Pick', options: [{ label: 'A' }] }] })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(specs.filter(spec => kindOf(spec) === 'poll')).toHaveLength(1)
+
+    claim()
+    await expect(asked).resolves.toEqual({ answers: [{ id: 'q', selected: ['Web'] }] })
+    // Let the killed-curl continuation and loser cleanup run to completion.
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // The long-poll stopped promptly (exactly one poll), and the posted message
+    // was edited best-effort through the same env-carried-URL pattern.
+    expect(specs.filter(spec => kindOf(spec) === 'poll')).toHaveLength(1)
+    const edits = specs.filter(spec => spec.env?.TELEGRAM_BOT_URL?.includes('/editMessageText'))
+    expect(edits).toHaveLength(1)
+    const body = JSON.parse(edits[0]!.stdin ?? '{}') as { message_id: string; text: string }
+    expect(body.message_id).toBe('100')
+    expect(body.text).toContain('(answered elsewhere)')
+    expectTokenOffArgv(specs)
+  })
+
+  it('stops polling on a caller abort but leaves the message untouched', async () => {
+    const { ctx, specs } = await wiredBlockingPoll()
+    const controller = new AbortController()
+
+    const asked = ctx.userQuestions.ask({
+      questions: [{ id: 'q', question: 'Pick', options: [{ label: 'A' }] }],
+      signal: controller.signal,
+    })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    controller.abort()
+
+    await expect(asked).rejects.toMatchObject({ name: 'UserQuestionError', code: 'ASK_ABORTED' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    // No other channel answered, so nothing may claim "answered elsewhere".
+    expect(specs.some(spec => spec.env?.TELEGRAM_BOT_URL?.includes('/editMessageText'))).toBe(false)
+    expect(specs.filter(spec => kindOf(spec) === 'poll')).toHaveLength(1)
+  })
+
+  it('skips an attempt cancelled while queued behind an earlier ask without touching Telegram', async () => {
+    const { ctx, specs, polls } = await wiredBlockingPoll()
+    const queued = new AbortController()
+    const firstCtl = new AbortController()
+
+    const first = ctx.userQuestions.ask({
+      questions: [{ id: 'q', question: 'First' }],
+      signal: firstCtl.signal,
+    })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const second = ctx.userQuestions.ask({
+      questions: [{ id: 'q', question: 'Second' }],
+      signal: queued.signal,
+    })
+    // Cancel the queued attempt before its serialization turn arrives.
+    queued.abort()
+    expect(specs.filter(spec => kindOf(spec) === 'send')).toHaveLength(1)
+
+    // Withdraw the first ask, then release its blocked curl: each caller abort
+    // settles its own ask authoritatively.
+    firstCtl.abort()
+    polls.splice(0).forEach((release) => { release() })
+    await expect(first).rejects.toMatchObject({ name: 'UserQuestionError', code: 'ASK_ABORTED' })
+    await expect(second).rejects.toMatchObject({ name: 'UserQuestionError', code: 'ASK_ABORTED' })
+
+    // The first ask polled once; the cancelled one never sent or drained anything extra.
+    expect(specs.filter(spec => kindOf(spec) === 'send')).toHaveLength(1)
+    expect(specs.filter(spec => kindOf(spec) === 'drain-probe')).toHaveLength(1)
   })
 })

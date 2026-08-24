@@ -24,7 +24,7 @@
 | 分组 | 归属 | 允许路径 | 上游化 / 退役 | 当前验证 |
 |---|---|---|---|---|
 | Agent Notes（fork 决策记录） | peck | `.agents/notes/**` | 决策保留至归档；通用修复经 GitHub Discussions 提交上游 | `verify-agent-note-classification`、`verify-agent-note-format`、translation pairing |
-| fork CI 工作流调整 | peck | `.github/workflows/*.yml`、`scripts/ci-workflow.spec.ts` | 待上游的触发预算与 runner 标签对本 fork 可用后回退 | `scripts/ci-workflow.spec.ts` |
+| fork CI 工作流调整 | peck | `.github/workflows/*.yml`、`.github/AGENTS.md`、`scripts/ci-workflow.spec.ts` | 待上游的触发预算与 runner 标签对本 fork 可用后回退 | `scripts/ci-workflow.spec.ts` |
 | fork 手册与状态文档 | peck | `IN_FLIGHT.md`、`PECK_DEPLOYMENT_TRAPS.md`、`PECK_HARNESS_BUILD_PLAN.md` | 发行计划完成、fork 运维与上游文档一致后删除 | Markdown 门禁（`verify-md-links`、`verify-md-wrap`） |
 | 仓库安全元数据 | peck | `.gitleaksignore` | 被标记的误报消失后删除对应条目 | gitleaks 扫描 |
 | 再生成的参考与成对译文 | upstream-shared | `THIRD_PARTY_NOTICES.md`、`docs/config-catalog.*`、`docs/event-producer-consumer.*`、`docs/persistence-catalog.*`、`docs/subsystems/extensions.*`、`docs/subsystems/user-questions.*`、`packages/core/scope/src/scoped-events.generated.ts` | 不单独退役；生成器随分歧源重新推导这些文件 | `doc-sync` 内的目录新鲜度门禁；依赖变更时 lefthook 再生成 notices |

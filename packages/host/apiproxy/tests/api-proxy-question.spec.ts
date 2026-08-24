@@ -118,3 +118,64 @@ describe('question response validation', () => {
     abort.abort()
   })
 })
+
+describe('question handler under racing', () => {
+  it('withdraws the web surface without hanging when another channel claims first', async () => {
+    const { ctx, api } = await harness()
+    // A competitor channel whose claim is released on demand.
+    let claim!: () => void
+    const claimed = new Promise<void>((resolve) => { claim = resolve })
+    void ctx.on('user-questions/ask', () =>
+      claimed.then(() => ({ answers: [{ id: 'target', selected: ['Code'] }] })))
+
+    const abort = new AbortController()
+    const mux = openMux(api, abort)
+    const asked = ctx.userQuestions.ask({
+      agent: agent(ctx),
+      questions: [{ id: 'target', question: 'Choose one', options: [{ label: 'Code' }, { label: 'Docs' }] }],
+    })
+    const envelope = await mux.waitForQuestion()
+
+    claim()
+    // The losing web handler resolves (superseded) rather than dangling; the
+    // answer travels from whichever channel won.
+    await expect(asked).resolves.toEqual({ answers: [{ id: 'target', selected: ['Code'] }] })
+
+    // The pending question left the GUI surface through the withdrawal frame...
+    const withdrawn = mux.envelopes.some(item => item.payload.type === 'question/resolved'
+      && item.payload.questionRpcId === envelope.rpcId)
+    expect(withdrawn).toBe(true)
+    // ...so a late GUI response to the stale rpcId is no longer pending.
+    expect(await api.respond(answer(envelope, ['Docs'])))
+      .toEqual({ accepted: false, reason: 'not-pending' })
+    abort.abort()
+  })
+
+  it('keeps the ask alive on the web channel when the GUI declines to answer it', async () => {
+    const { ctx, api } = await harness()
+    let claim!: () => void
+    const claimed = new Promise<void>((resolve) => { claim = resolve })
+    void ctx.on('user-questions/ask', () =>
+      claimed.then(() => ({ answers: [{ id: 'target', selected: ['Docs'] }] })))
+
+    const abort = new AbortController()
+    const mux = openMux(api, abort)
+    const asked = ctx.userQuestions.ask({
+      agent: agent(ctx),
+      questions: [{ id: 'target', question: 'Choose one', options: [{ label: 'Code' }, { label: 'Docs' }] }],
+    })
+    const envelope = await mux.waitForQuestion()
+
+    // The web channel itself fails authoritatively (user cancelled in the GUI):
+    // that settles the whole ask even though the competitor had not answered.
+    expect(await api.respond({
+      type: 'client-response',
+      rpcId: envelope.rpcId,
+      result: { ok: false, error: { code: 'cancelled', message: 'cancelled', details: {} } },
+    })).toEqual({ accepted: true })
+    await expect(asked).rejects.toMatchObject({ name: 'UserQuestionError', code: 'ASK_CANCELLED' })
+    expect(mux.envelopes.some(item => item.payload.type === 'question/resolved')).toBe(true)
+    claim()
+    abort.abort()
+  })
+})
