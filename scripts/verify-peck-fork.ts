@@ -93,6 +93,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Peck-owned packages',
     owner: 'peck',
     patterns: [
+      'packages/guard/deployment-refusal/**',
       'packages/interaction/telegram-answerer/**',
       'packages/llm/llm-claude-cli/**',
       'packages/session/session-metered-receipt/**',
