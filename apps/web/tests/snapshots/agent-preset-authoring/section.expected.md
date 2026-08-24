@@ -61,6 +61,16 @@
       - 'button "复制: 创造模式"':
         - img
         - text: 复制
+    - listitem:
+      - 'button "设为默认: Peck 模式"':
+        - text: Peck 模式 内置 面向 Peck 产品的标准编码 Agent：完整标准能力，携带 Peck persona，并预置可选的 Peck 宿主包（默认禁用）。
+        - code: peck
+      - 'button "查看: Peck 模式"':
+        - img
+        - text: 查看
+      - 'button "复制: Peck 模式"':
+        - img
+        - text: 复制
   - heading "自定义" [level=3]
   - button "用「创造模式」创作自定义预设":
     - img

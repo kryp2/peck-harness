@@ -25,7 +25,7 @@
   - img
   - img
   - text: Ask question waiting
-- status: Pecking...
+- status: Deep diving...
 - text: "Interjection: include the word BANANA in your final reply."
 - button "Copy":
   - img

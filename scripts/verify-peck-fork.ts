@@ -101,6 +101,17 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     retirement: 'Offered upstream as whole packages through GitHub Discussions if upstream adopts the capability; otherwise permanent fork payload.',
   },
   {
+    id: 'peck-composition',
+    title: 'Peck composition layer (product bundle, client brand package, agent preset)',
+    owner: 'peck',
+    patterns: [
+      'apps/cli/config/agent-presets/peck/**',
+      'packages/bundle/peck/**',
+      'packages/client/ui-brand-peck/**',
+    ],
+    retirement: 'Wholly peck-owned path space: the product composition lives here so the generic presets, bundles, and brand packages stay upstream-neutral. Offered upstream only if upstream adopts a product-composition seam.',
+  },
+  {
     id: 'shared-runtime-features',
     title: 'Feature work on upstream-shared packages',
     owner: 'upstream-shared',
@@ -137,7 +148,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'scripts/client-build-environment.client.spec.ts',
       'scripts/client-build-environment.ts',
     ],
-    retirement: 'Never upstreamed; re-applied across every sync while the product runs under the Peck name.',
+    retirement: 'Generic persona and visual-identity surfaces stay upstream-neutral; Peck branding composes only in the peck-composition group. Each listed path retires once its content matches upstream again, and the next merge-base refresh drops the emptied group.',
   },
   {
     id: 'workspace-registration',

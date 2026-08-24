@@ -17,7 +17,7 @@
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
 - paragraph: partial
-- status: Pecking...
+- status: Deep diving...
 - textbox "Message the agent"
 - button "Commands":
   - img

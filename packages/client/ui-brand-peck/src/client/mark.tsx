@@ -1,8 +1,9 @@
-// Peck bird mark (the peck.to logo, shared with the app favicon). Native 24x24,
-// drawn in 24x24 viewBox; color rides currentColor so the mark inks the same as
-// adjacent wordmark text.
+// Peck bird mark (shared artwork with the peck.to favicon). Native 24x24,
+// drawn in a 24x24 viewBox; color rides currentColor so the mark inks the same
+// as adjacent wordmark text. Kept private to this package so the generic
+// primitives package stays upstream-neutral brand art.
 
-import type { IconProps } from './icons/props.ts'
+import type { IconProps } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /**
  * Render the peck bird mark.
@@ -10,7 +11,7 @@ import type { IconProps } from './icons/props.ts'
  * @param props.className - extra class for layout placement.
  * @returns the logo svg (aria-hidden decorative brand art).
  */
-export function PeckLogo({ size = 24, className }: IconProps) {
+export function PeckMark({ size = 24, className }: IconProps) {
   return (
     <svg
       width={size}

@@ -62,6 +62,7 @@ describe('web app browser startup', () => {
       '  config:',
       '    openBrowser: true',
       '    printUrl: false',
+      '    productName: DeepSeek Harness',
       '    surfaceContext: false',
       '    trustedHosts: []',
       '',
