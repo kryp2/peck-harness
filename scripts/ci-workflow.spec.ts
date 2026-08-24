@@ -74,13 +74,25 @@ describe('CI workflow', () => {
     expect(commandSteps.some(step => step.run.includes('wine-windows-gates.sh'))).toBe(true)
 
     // windows-native: non-blocking native job with failover, runs windows-complete.
-    // Its pool is resolved by the Windows-specific switch.
+    //
+    // FORK POLICY (deepseek-harness PR #12, owner decision 2026-08-24): the
+    // hosted default pool is GitHub's `windows-latest`, and Windows failover
+    // (DSH_CI_FAILOVER_WINDOWS=selfhosted, excluded for Dependabot PRs)
+    // targets the in-house `[self-hosted, dsh-win-ci, windows]` pool. These
+    // two are the only runner labels this job may resolve to — the upstream
+    // dsh-windows-* pools are deliberately not operated on this fork. Do not
+    // "restore" a dsh-windows-* label here.
     expect(typeof windowsNative['runs-on']).toBe('string')
-    expect(windowsNative['runs-on']).toContain('DSH_CI_FAILOVER_WINDOWS')
-    expect(windowsNative['runs-on']).not.toContain('DSH_CI_FAILOVER_LINUX')
-    expect(windowsNative['runs-on']).toContain('self-hosted')
-    expect(windowsNative['runs-on']).toContain('dsh-win-ci')
-    expect(windowsNative['runs-on']).toContain('dsh-windows-2025-16core')
+    // Whitespace-normalized equality pins the entire selector, so both
+    // accepted outcomes (and the Dependabot exclusion) are asserted at once.
+    const windowsNativeRunsOn = String(windowsNative['runs-on']).replace(/\s+/g, ' ').trim()
+    expect(windowsNativeRunsOn).toBe(
+      '${{ vars.DSH_CI_FAILOVER_WINDOWS == \'selfhosted\''
+      + ' && github.event.pull_request.user.login != \'dependabot[bot]\''
+      + ' && fromJSON(\'["self-hosted", "dsh-win-ci", "windows"]\')'
+      + ' || \'windows-latest\' }}',
+    )
+    expect(windowsNativeRunsOn).not.toContain('DSH_CI_FAILOVER_LINUX')
     expect(windowsNative.name).toBe('windows node 24 / native complete')
     expect(windowsNative.if).toBe("github.event_name == 'pull_request'")
     expect(windowsNative.env).toMatchObject({
@@ -120,7 +132,13 @@ describe('CI workflow', () => {
     expect(aggregate['runs-on']).toContain('vm-backup')
   })
 
-  it('exempts push from cancellation in ci-master, so one master merge does not cancel the running drill', () => {
+  it('keeps ci-master dispatch-only, cancelling each superseded dispatch, with inert master-push guards intact', () => {
+    // FORK POLICY (deepseek-harness PR #12, owner decision 2026-08-24):
+    // ci-master.yml is dispatch-ONLY. Every job in it targets upstream's
+    // self-hosted pools (dsh-ubuntu-*, dsh-windows-*, vm-backup), which this
+    // fork does not operate, so an automatic master push would only pile up
+    // runs queued for runners that do not exist here. Do not re-add `push`
+    // to its `on:` block.
     const workflow = loadWorkflow('.github/workflows/ci-master.yml')
     const prWorkflow = loadWorkflow('.github/workflows/ci.yml')
     if (!isRecord(workflow.jobs) || !isRecord(workflow.concurrency)) {
@@ -132,11 +150,12 @@ describe('CI workflow', () => {
 
     // Cancellation applies to the whole superseded RUN, so this has to be
     // decided at workflow level and gated on the event: a job-level group
-    // cannot exempt its job from its run being cancelled. Only push is exempt —
-    // a drill takes longer than the interval between master merges. The negated
-    // form is load-bearing: `== 'pull_request'` would also stop cancelling
-    // workflow_dispatch, and a re-dispatched runner benchmark holds up to 12
-    // larger runners for 15 minutes in this same group on master.
+    // cannot exempt its job from its run being cancelled. The negated
+    // expression is kept verbatim from the pre-fork workflow: with push gone
+    // from the trigger set (fork PR #12) it always evaluates true, so a fresh
+    // dispatch replaces a running benchmark or drill in this group instead of
+    // stacking behind it — and re-enabling push later would restore the drill
+    // carve-out without another change here.
     expect(workflow.concurrency['cancel-in-progress']).toBe("${{ github.event_name != 'push' }}")
 
     // The PR-only ci.yml still cancels a superseded run on a new push, so a
@@ -147,13 +166,15 @@ describe('CI workflow', () => {
     })
 
     // The exact event sets are what keep master-only jobs out of the PR check
-    // panel: ci-master triggers only on push(master) + workflow_dispatch and
-    // never on pull_request; ci.yml is exactly pull_request-only. Assert the
-    // full sets so losing the wrong event, or gaining an extra one, fails.
+    // panel: ci-master listens ONLY to workflow_dispatch on this fork (see the
+    // fork-policy comment above; dispatch-only is intentional, not an
+    // omission) and never to pull_request or push; ci.yml is exactly
+    // pull_request-only. Assert the full sets so losing the wrong event, or
+    // gaining an extra one, fails.
     if (!isRecord(workflow.on) || !isRecord(prWorkflow.on)) {
       throw new TypeError('both CI workflows must define on')
     }
-    expect(Object.keys(workflow.on).sort()).toEqual(['push', 'workflow_dispatch'])
+    expect(Object.keys(workflow.on)).toEqual(['workflow_dispatch'])
     expect(Object.keys(prWorkflow.on)).toEqual(['pull_request'])
 
     // Neither drill may carry a job-level group: it would not exempt the job
@@ -162,28 +183,43 @@ describe('CI workflow', () => {
       const job = workflow.jobs[name]
       if (!isRecord(job)) throw new TypeError(`${name} must be defined`)
       expect(job.concurrency).toBeUndefined()
-      // Both stay master-push-only; that is what makes the push carve-out safe.
+      // Their master-push guards are retained verbatim but are INERT under the
+      // dispatch-only trigger (fork PR #12): `workflow_dispatch` can never
+      // satisfy them, so the drills stay parked until push and its pools come
+      // back. Pinning the guard prevents an accidental "fix" that would let a
+      // drill start — and bill — on every manual dispatch.
       expect(job.if).toBe("github.event_name == 'push' && github.ref == 'refs/heads/master'")
     }
 
-    // What bounds the cost of exempting push: a master push may only carry the
-    // cache seeder and the two drills. Any job reachable on push would start
-    // accumulating uncancelled runs, so the set is pinned here.
-    const NOT_PUSH_REACHABLE = new Set([
-      "github.event_name == 'workflow_dispatch' && inputs.suite == 'larger-runner-benchmark'",
-      "github.event_name == 'workflow_dispatch' && inputs.suite == 'consolidated-runner-benchmark'",
-    ])
-    const pushReachable = Object.entries(workflow.jobs)
-      .filter(([, job]) => {
-        if (!isRecord(job)) return false
-        if (job.if === undefined) return true // unconditional: runs on every event
-        if (job.if === false) return false // `if: false` parses as a boolean
-        if (typeof job.if !== 'string') return true // unrecognized shape: surface it
-        return !NOT_PUSH_REACHABLE.has(job.if.trim())
-      })
-      .map(([name]) => name)
-      .sort()
-    expect(pushReachable).toEqual(['serial-linux-selfhosted', 'serial-windows', 'wine-apt-cache'])
+    // What bounds the cost of a dispatch: a manual run may start only the two
+    // benchmark matrices, selected by the suite input over exactly these
+    // choices. Every other job must therefore be either explicitly disabled
+    // (`if: false`) or carry the inert master-push guard above — any other
+    // condition would start work on every dispatch.
+    const SUITES = ['larger-runner-benchmark', 'consolidated-runner-benchmark']
+    const MASTER_PUSH_GUARD = "github.event_name == 'push' && github.ref == 'refs/heads/master'"
+    const dispatch = workflowEvent(workflow, 'workflow_dispatch')
+    if (!isRecord(dispatch.inputs) || !isRecord(dispatch.inputs.suite)) {
+      throw new TypeError('ci-master must define the suite workflow_dispatch input')
+    }
+    expect(dispatch.inputs.suite).toMatchObject({
+      type: 'choice',
+      required: true,
+      default: 'larger-runner-benchmark',
+      options: SUITES,
+    })
+    for (const [name, job] of Object.entries(workflow.jobs)) {
+      if (!isRecord(job)) throw new TypeError(`${name} must be a record`)
+      const condition = typeof job.if === 'string' ? job.if.trim() : job.if
+      const suiteSelected = SUITES.some(
+        suite => condition === `github.event_name == 'workflow_dispatch' && inputs.suite == '${suite}'`,
+      )
+      if (suiteSelected || condition === false) continue
+      expect(
+        job.if,
+        `${name} must select a benchmark suite, be disabled with if: false, or carry the inert master-push guard`,
+      ).toBe(MASTER_PUSH_GUARD)
+    }
 
     // Why workflow_dispatch must keep cancelling: each benchmark fans out to a
     // dozen larger runners at once, in this same group on master. If it stopped
