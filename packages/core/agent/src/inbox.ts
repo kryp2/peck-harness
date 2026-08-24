@@ -9,6 +9,30 @@ import type { Session, SessionEventMap, UserMessage } from '@deepseek-ai/dsh-ses
 import type { InboxTarget } from './types.ts'
 
 /**
+ * One queued input as splices written before the full message representation
+ * stored it: the bare prompt text, or an object without message fields.
+ */
+type LegacyInboxEntry = string | null | { [key: string]: unknown }
+
+/**
+ * One `inserted` element exactly as the durable log holds it. Current writers
+ * commit {@link UserMessage} values, while logs written before that
+ * representation existed store {@link LegacyInboxEntry} placeholders; the
+ * durable event keeps whatever its writer committed.
+ */
+type PersistedInboxEntry = UserMessage | LegacyInboxEntry
+
+/**
+ * Whether one persisted entry already carries the full message representation.
+ * Writers commit `id`, `content`, and `source` together, so the presence of
+ * `source` distinguishes shaped messages from legacy placeholders; every
+ * consumer reads all three fields unconditionally.
+ */
+function isShapedUserMessage(entry: PersistedInboxEntry): entry is UserMessage {
+  return typeof entry === 'object' && entry !== null && 'source' in entry
+}
+
+/**
  * Repair one persisted inbox entry that predates the full message
  * representation: those splices stored the queued prompt as raw text, so
  * replaying them puts a bare string where every consumer reads `id`, `content`,
@@ -19,8 +43,8 @@ import type { InboxTarget } from './types.ts'
  * @param index - position within that splice, for a stable repaired identity.
  * @returns the entry unchanged when it is already a message, else its repair.
  */
-function repairPersistedEntry(entry: UserMessage, seq: number, index: number): UserMessage {
-  if (typeof entry === 'object' && entry !== null && 'source' in entry) return entry
+function repairPersistedEntry(entry: PersistedInboxEntry, seq: number, index: number): UserMessage {
+  if (isShapedUserMessage(entry)) return entry
   const text: string = typeof entry === 'string' ? entry : JSON.stringify(entry)
   return {
     id: `legacy-inbox-${String(seq)}-${String(index)}` as MessageId,
