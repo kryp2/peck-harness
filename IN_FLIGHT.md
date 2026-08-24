@@ -13,5 +13,6 @@ _Sist oppdatert: 2026-08-24 (bølge 1 kjørt: PR #18–#21 merget)_
 - CI-restgjeld: hmr-live.e2e feiler kun i runner (passerer standalone verifisert — diagnosebrief 05 klar til kjøring).
 
 ## Blokkert / venter på
+- **Prod-peck-stacken kjører på b550 siden 24.08** (P15 beholder dev-harnessen foreløpig; flytting av harness dit «når den er klar»). Når den flyttes: land task 16 (immutable deploy-manifest) og task 11 (refusal guard) FØRST — migrering er det billigste øyeblikket å slutte med mutabel home-profil-patch, og b550 må ikke eksponeres uten app-auth.
 - Upstream er pull-only speiling; sync = fetch upstream + merge inn i kryp2/peck-harness. Etter hver sync: refresh `UPSTREAM_MERGE_BASE` i scripts/verify-peck-fork.ts og re-klassifiser nye stier (gate feiler ellers med refresh-instruks).
 - pnpm A3: bruk alltid `npx -y pnpm@11.7.0`; node_modules reinstallert på 11.7.0 (purge godkjent av Thomas 22.08).
