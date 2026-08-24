@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-08-24-peck-fork-divergence-inventory-gate.md
+2026-08-24-peck-fork-divergence-inventory-gate.md: 43f59319414f1779444758786779c8f7ab323a3c
+2026-08-24-peck-fork-divergence-inventory-gate.zh.md: 713725e48415c3154f52c46e9aee3ed8ee27d811
