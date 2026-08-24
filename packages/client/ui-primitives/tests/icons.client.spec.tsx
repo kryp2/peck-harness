@@ -75,7 +75,45 @@ describe('PeckLogo', () => {
     expect(svg.getAttribute('height')).toBe('24')
     expect(svg.getAttribute('viewBox')).toBe('0 0 24 24')
     expect(container.querySelectorAll('circle')).toHaveLength(2)
+    expect(container.querySelectorAll('path')).toHaveLength(9)
     expect(container.innerHTML).toContain('currentColor')
     expect(container.innerHTML).not.toMatch(/#[0-9a-fA-F]{3,8}"/)
+  })
+
+  it('accepts an explicit size and layout class', () => {
+    const { container } = render(<primitives.PeckLogo size={34} className="hero-mark" />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe('34')
+    expect(svg.getAttribute('height')).toBe('34')
+    expect(svg.getAttribute('class')).toBe('hero-mark')
+  })
+})
+
+describe('BrandWordmark', () => {
+  it('renders bird plus literal wordmark at the default size', () => {
+    const { container } = render(<primitives.BrandWordmark />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe(`${(24 * 160) / 24}`)
+    expect(svg.getAttribute('viewBox')).toBe('0 0 160 24')
+    expect(container.querySelectorAll('circle')).toHaveLength(2)
+    expect(container.querySelector('text')?.textContent).toBe('Peck Harness')
+    expect(svg.getAttribute('fill')).toBe('none')
+  })
+
+  it('omits the leading mark and shifts the viewBox when includeMark is false', () => {
+    const { container } = render(<primitives.BrandWordmark includeMark={false} />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe(`${(24 * 136) / 24}`)
+    expect(svg.getAttribute('viewBox')).toBe('24 0 136 24')
+    expect(container.querySelectorAll('circle')).toHaveLength(0)
+    expect(container.querySelector('text')?.textContent).toBe('Peck Harness')
+  })
+
+  it('scales a custom size through the fixed ratio with an optional class', () => {
+    const { container } = render(<primitives.BrandWordmark size={32} className="boot-wordmark" />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe(`${(32 * 160) / 24}`)
+    expect(svg.getAttribute('height')).toBe('32')
+    expect(svg.getAttribute('class')).toBe('boot-wordmark')
   })
 })
