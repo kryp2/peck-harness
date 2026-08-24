@@ -108,6 +108,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'apps/cli/config/agent-presets/peck/**',
       'packages/bundle/peck/**',
       'packages/client/ui-brand-peck/**',
+      'packages/extensions/cordis-client-runner/src/client/slot-catalog.ts',
     ],
     retirement: 'Wholly peck-owned path space: the product composition lives here so the generic presets, bundles, and brand packages stay upstream-neutral. Offered upstream only if upstream adopts a product-composition seam.',
   },
@@ -157,6 +158,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     patterns: [
       'pnpm-lock.yaml',
       'tsconfig.base.json',
+      'tsconfig.client.json',
       'tsconfig.host.json',
       'scripts/gen-cordis-catalog.ts',
       'scripts/verify-package-readme-model-experience.ts',

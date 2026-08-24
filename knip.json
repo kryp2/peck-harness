@@ -664,6 +664,12 @@
       "ignoreDependencies": [
         "@deepseek-ai/.+"
       ]
+    },
+    "packages/bundle/peck": {
+      "ignoreDependencies": [
+        "@deepseek-ai/dsh-client-ui-brand-peck",
+        "@deepseek-ai/dsh-telegram-answerer"
+      ]
     }
   }
 }
