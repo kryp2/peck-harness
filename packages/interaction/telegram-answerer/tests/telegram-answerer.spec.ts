@@ -12,6 +12,8 @@ import {
   apply as applyAnswerer,
 } from '@deepseek-ai/dsh-telegram-answerer'
 
+const CHAT = '123456'
+
 describe('telegram-answerer pure helpers', () => {
   it('builds one inline button per option with opt:N callback data', () => {
     const keyboard = keyboardFor({
@@ -22,6 +24,20 @@ describe('telegram-answerer pure helpers', () => {
       inline_keyboard: [
         [{ text: 'A', callback_data: 'opt:0' }],
         [{ text: 'B', callback_data: 'opt:1' }],
+      ],
+    })
+  })
+
+  it('embeds the per-question nonce in callback data when one is supplied', () => {
+    const keyboard = keyboardFor(
+      { id: 'q', question: 'Pick one', options: [{ label: 'A' }, { label: 'B' }] },
+      'a1b2c3d4',
+    )
+
+    expect(keyboard).toEqual({
+      inline_keyboard: [
+        [{ text: 'A', callback_data: 'opt:0:a1b2c3d4' }],
+        [{ text: 'B', callback_data: 'opt:1:a1b2c3d4' }],
       ],
     })
   })
@@ -38,10 +54,12 @@ describe('telegram-answerer pure helpers', () => {
     expect(formatQuestion(question, 1, 2)).toBe('[2/2] Confirm\nProceed?\n\nPlan text')
   })
 
-  it('maps a callback reply to the selected option label', () => {
+  it('maps a callback reply to the selected option label, with or without a nonce suffix', () => {
     const question = { id: 'q', question: 'Pick', options: [{ label: 'A' }, { label: 'B' }] }
 
     expect(answerItemFor({ kind: 'callback', value: 'opt:1' }, question))
+      .toEqual({ id: 'q', selected: ['B'] })
+    expect(answerItemFor({ kind: 'callback', value: 'opt:1:deadbeef' }, question))
       .toEqual({ id: 'q', selected: ['B'] })
   })
 
@@ -54,16 +72,11 @@ describe('telegram-answerer pure helpers', () => {
       .toEqual({ id: 'q', selected: [] })
   })
 
-  it('falls back to free text when a callback value is not a recognised option index', () => {
+  it('falls back to free text when a callback index is not a recognised option or shape', () => {
     const question = { id: 'q', question: 'Pick', options: [{ label: 'A' }] }
 
     expect(answerItemFor({ kind: 'callback', value: 'opt:9' }, question))
       .toEqual({ id: 'q', selected: [], custom: 'opt:9' })
-  })
-
-  it('falls back to free text when a callback value does not match the opt:N shape', () => {
-    const question = { id: 'q', question: 'Pick', options: [{ label: 'A' }] }
-
     expect(answerItemFor({ kind: 'callback', value: 'bogus' }, question))
       .toEqual({ id: 'q', selected: [], custom: 'bogus' })
   })
@@ -93,9 +106,24 @@ function shellResult(over: Partial<ShellRunResult> = {}): ShellRunResult {
   }
 }
 
-/** Duck-typed shell that scripted `run` returns, recording each resolved spec. */
-function shell(run: (spec: ShellExecSpec) => Promise<ShellRunResult>): { executor: ShellExecutor; specs: ShellExecSpec[] } {
+/** Which Bot API call one resolved spec represents, judged by the env-carried URL. */
+type CallKind = 'send' | 'drain-probe' | 'poll'
+
+const kindOf = (spec: ShellExecSpec): CallKind => {
+  const url = spec.env?.TELEGRAM_BOT_URL ?? ''
+  return url.includes('/sendMessage') ? 'send'
+    : url.includes('offset=-1') ? 'drain-probe'
+      : 'poll'
+}
+
+const sendOk = (messageId: number): string => JSON.stringify({ ok: true, result: { message_id: messageId } })
+
+/** Duck-typed shell whose scripted `run` returns per call kind, recording each resolved spec. */
+function shell(
+  run: (kind: CallKind, spec: ShellExecSpec, nthPoll: number) => Promise<ShellRunResult>,
+): { executor: ShellExecutor; specs: ShellExecSpec[] } {
   const specs: ShellExecSpec[] = []
+  let polls = 0
   const executor = {
     resolve(request: ShellExecRequest): ShellExecSpec {
       return {
@@ -103,12 +131,15 @@ function shell(run: (spec: ShellExecSpec) => Promise<ShellRunResult>): { executo
         timeoutMs: request.timeoutMs ?? 0, stdoutMaxBytes: request.stdoutMaxBytes ?? 64_000,
         ...request.signal ? { signal: request.signal } : {},
         ...request.stdin !== undefined ? { stdin: request.stdin } : {},
+        ...request.env !== undefined ? { env: request.env } : {},
         sandboxPolicy: request.sandboxPolicy,
       }
     },
     async run(spec: ShellExecSpec): Promise<ShellRunResult> {
       specs.push(spec)
-      return run(spec)
+      const kind = kindOf(spec)
+      if (kind === 'poll') polls += 1
+      return await run(kind, spec, polls)
     },
   } as unknown as ShellExecutor
   return { executor, specs }
@@ -124,33 +155,254 @@ function credentials(value: { token: string; chatId: string } | undefined): Cred
   } as unknown as CredentialProvider
 }
 
-describe('telegram-answerer wired answer path', () => {
-  it('answers a question by posting to Telegram and reading the callback reply', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
+/** Assert the token never appears on a command line and always travels via the env URL. */
+function expectTokenOffArgv(specs: ShellExecSpec[]): void {
+  expect(specs.length).toBeGreaterThan(0)
+  for (const spec of specs) {
+    expect(spec.command).not.toContain('tok')
+    expect(spec.env?.TELEGRAM_BOT_URL).toContain('/bottok/')
+  }
+}
 
-    // One sendMessage (ok), then one getUpdates carrying the button press opt:0.
-    const { executor, specs } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
+async function wired(
+  run: (kind: CallKind, spec: ShellExecSpec, nthPoll: number) => Promise<ShellRunResult>,
+  config: { timeoutMs?: number } = {},
+): Promise<{ ctx: Context; specs: ShellExecSpec[] }> {
+  const ctx = new Context()
+  await ctx.plugin(UserQuestionService)
+  const { executor, specs } = shell(run)
+  ctx.provide('shell', executor)
+  ctx.provide('credentials', credentials({ token: 'tok', chatId: CHAT }))
+  applyAnswerer(ctx, config)
+  return { ctx, specs }
+}
+
+describe('telegram-answerer wired answer path', () => {
+  it('answers a callback press correlated to the message it sent, over a drained cursor', async () => {
+    let nonce = ''
+    const { ctx, specs } = await wired(async (kind, spec) => {
+      if (kind === 'send') {
+        nonce = /\(q:([0-9a-f]{8})\)/.exec(spec.stdin ?? '')?.[1] ?? ''
+        return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      }
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
       return shellResult({
         stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 1, callback_query: { from: { id: 123456 }, data: 'opt:0' } }] }),
+          text: JSON.stringify({
+            ok: true,
+            result: [{ update_id: 5, callback_query: { from: { id: Number(CHAT) }, data: `opt:0:${nonce}`, message: { message_id: 100 } } }],
+          }),
           truncated: false,
         },
       })
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
 
     const answer = await ctx.userQuestions.ask({
       questions: [{ id: 'q', question: 'Pick one', options: [{ label: 'A' }, { label: 'B' }] }],
     })
 
     expect(answer).toEqual({ answers: [{ id: 'q', selected: ['A'] }] })
-    // sendMessage posted via POST, and getUpdates polled via GET afterwards.
-    expect(specs.some(s => s.command.includes('sendMessage'))).toBe(true)
-    expect(specs.some(s => s.command.includes('getUpdates'))).toBe(true)
+    expect(nonce).toMatch(/^[0-9a-f]{8}$/)
+    // The drain probe ran before the send, and the poll carried no offset yet.
+    const kinds = specs.map(kindOf)
+    expect(kinds.indexOf('drain-probe')).toBeGreaterThanOrEqual(0)
+    expect(kinds.indexOf('drain-probe')).toBeLessThan(kinds.indexOf('send'))
+    const poll = specs.find(s => kindOf(s) === 'poll')
+    expect(poll?.env?.TELEGRAM_BOT_URL).not.toContain('offset=')
+    expectTokenOffArgv(specs)
+  })
+
+  it('drains a pending stale update before sending, then polls past its update id', async () => {
+    const { ctx, specs } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') {
+        return shellResult({
+          stdout: {
+            text: JSON.stringify({ ok: true, result: [{ update_id: 7, message: { chat: { id: Number(CHAT) }, text: 'stale answer' } }] }),
+            truncated: false,
+          },
+        })
+      }
+      return shellResult({
+        stdout: {
+          text: JSON.stringify({ ok: true, result: [{ update_id: 9, message: { chat: { id: Number(CHAT) }, text: 'fresh answer' } }] }),
+          truncated: false,
+        },
+      })
+    })
+
+    const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
+
+    expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'fresh answer' }] })
+    // The stale text was consumed by the drain (cursor 8), so the poll starts at offset 8.
+    const poll = specs.find(s => kindOf(s) === 'poll')
+    expect(poll?.env?.TELEGRAM_BOT_URL).toContain('offset=8')
+  })
+
+  it('ignores a callback press that references an earlier question message', async () => {
+    let polls = 0
+    const { ctx, specs } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      // A drain entry without an update id cannot advance the cursor.
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [{ shape: 'malformed' }] }), truncated: false } })
+      polls += 1
+      if (polls === 1) {
+        // A press left over from a previous question's keyboard: right chat, old message.
+        return shellResult({
+          stdout: {
+            text: JSON.stringify({
+              ok: true,
+              result: [{ update_id: 3, callback_query: { from: { id: Number(CHAT) }, data: 'opt:0:stale', message: { message_id: 99 } } }],
+            }),
+            truncated: false,
+          },
+        })
+      }
+      return shellResult({
+        stdout: {
+          text: JSON.stringify({ ok: true, result: [{ update_id: 4, message: { chat: { id: Number(CHAT) }, text: 'typed instead' } }] }),
+          truncated: false,
+        },
+      })
+    })
+
+    const answer = await ctx.userQuestions.ask({
+      questions: [{ id: 'q', question: 'Pick', options: [{ label: 'A' }] }],
+    })
+
+    expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'typed instead' }] })
+    expect(polls).toBe(2)
+    expectTokenOffArgv(specs)
+  })
+
+  it('reuses the established cursor across consecutive asks without probing again', async () => {
+    let lastUpdateId = 20
+    const { ctx, specs } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(lastUpdateId + 1000), truncated: false } })
+      if (kind === 'drain-probe') {
+        return shellResult({
+          stdout: {
+            text: JSON.stringify({ ok: true, result: [{ update_id: 20, message: { chat: { id: Number(CHAT) }, text: 'old' } }] }),
+            truncated: false,
+          },
+        })
+      }
+      lastUpdateId += 1
+      return shellResult({
+        stdout: {
+          text: JSON.stringify({ ok: true, result: [{ update_id: lastUpdateId, message: { chat: { id: Number(CHAT) }, text: `answer ${lastUpdateId}` } }] }),
+          truncated: false,
+        },
+      })
+    })
+
+    await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'First?' }] })
+    await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Second?' }] })
+
+    // Exactly one drain probe across both asks; later polls advance the shared cursor.
+    expect(specs.filter(s => kindOf(s) === 'drain-probe')).toHaveLength(1)
+    const pollOffsets = specs.filter(s => kindOf(s) === 'poll')
+      .map(s => Number(/offset=(\d+)/.exec(s.env?.TELEGRAM_BOT_URL ?? '')?.[1]))
+    expect(pollOffsets.length).toBe(2)
+    expect(pollOffsets[1]).toBeGreaterThan(pollOffsets[0]!)
+  }, 15_000)
+
+  it('serializes concurrent asks so their sends and polls never interleave', async () => {
+    let releaseFirstPoll: (() => void) | undefined
+    const firstPollGate = new Promise<void>((resolve) => { releaseFirstPoll = resolve })
+    let polls = 0
+    const { ctx, specs } = await wired(async (kind, _spec, nthPoll) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(nthPoll === 0 ? 500 : 600), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      polls += 1
+      if (polls === 1) await firstPollGate
+      const sent = polls === 1 ? 500 : 600
+      return shellResult({
+        stdout: {
+          text: JSON.stringify({ ok: true, result: [{ update_id: polls, message: { chat: { id: Number(CHAT) }, text: `reply ${sent}` } }] }),
+          truncated: false,
+        },
+      })
+    }, { timeoutMs: 10_000 })
+
+    const first = ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'First' }] })
+    // Wait until the first ask is inside its poll, then queue a second ask behind it.
+    await new Promise(resolve => setTimeout(resolve, 30))
+    const second = ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Second' }] })
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    // The queued ask cannot touch Telegram while the first still owns the chat.
+    expect(specs.filter(s => kindOf(s) === 'send')).toHaveLength(1)
+
+    releaseFirstPoll!()
+    await expect(first).resolves.toEqual({ answers: [{ id: 'q', selected: [], custom: 'reply 500' }] })
+    await expect(second).resolves.toEqual({ answers: [{ id: 'q', selected: [], custom: 'reply 600' }] })
+    expect(specs.filter(s => kindOf(s) === 'send')).toHaveLength(2)
+  }, 15_000)
+
+  it('recovers the serialized queue after a failed ask', async () => {
+    let sends = 0
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      if (kind === 'send') {
+        sends += 1
+        if (sends === 1) return shellResult({ exitCode: 1, stdout: { text: 'curl failed', truncated: false } })
+        return shellResult({ stdout: { text: sendOk(300), truncated: false } })
+      }
+      return shellResult({
+        stdout: {
+          text: JSON.stringify({ ok: true, result: [{ update_id: 2, message: { chat: { id: Number(CHAT) }, text: 'after recovery' } }] }),
+          truncated: false,
+        },
+      })
+    })
+
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Fails' }] }))
+      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Works' }] }))
+      .resolves.toEqual({ answers: [{ id: 'q', selected: [], custom: 'after recovery' }] })
+  })
+
+  it('falls through when the drain probe fails closed against Telegram', async () => {
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: false }), truncated: false } })
+      throw new Error('unexpected call beyond the drain probe')
+    })
+
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say' }] }))
+      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
+  })
+
+  it('falls through when the send response carries no message id', async () => {
+    let sends = 0
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') {
+        sends += 1
+        // First a missing result object, then an object without the message id.
+        const text = sends === 1
+          ? JSON.stringify({ ok: true })
+          : JSON.stringify({ ok: true, result: {} })
+        return shellResult({ stdout: { text, truncated: false } })
+      }
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      throw new Error('unexpected poll after a failed send')
+    })
+
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say' }] }))
+      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say again' }] }))
+      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
+  })
+
+  it('falls through when Telegram rejects the send transport', async () => {
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ exitCode: 1, stdout: { text: 'curl failed', truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      throw new Error('unexpected poll after a failed send')
+    })
+
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] }))
+      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
   })
 
   it('falls through to the next answerer when Telegram is unconfigured', async () => {
@@ -160,43 +412,39 @@ describe('telegram-answerer wired answer path', () => {
     ctx.provide('credentials', credentials(undefined))
     applyAnswerer(ctx, { timeoutMs: 2000 })
 
-    // No answerer on the waterfall claims it, so the ask fails closed with NO_ANSWERER.
     await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say' }] }))
       .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
   })
 
   it('answers a free-text question from a plain reply message', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
+    const { ctx, specs } = await wired(async (kind, spec) => {
+      if (kind === 'send') {
+        expect(spec.stdin).toContain('(q:')
+        return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      }
+      // A non-array drain result means "nothing pending"; the cursor stays unset.
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: {} }), truncated: false } })
       return shellResult({
         stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: 123456 }, text: 'hello there' } }] }),
+          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: Number(CHAT) }, text: 'hello there' } }] }),
           truncated: false,
         },
       })
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
 
     const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
 
     expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'hello there' }] })
+    expectTokenOffArgv(specs)
   })
 
   it('ignores a reply from a non-authorized chat and then answers from the authorized one', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
     let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
       polls += 1
       if (polls === 1) {
-        // First poll: a reply from a different chat that must be ignored, so the loop retries.
         return shellResult({
           stdout: {
             text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: 999999 }, text: 'wrong chat' } }] }),
@@ -206,14 +454,11 @@ describe('telegram-answerer wired answer path', () => {
       }
       return shellResult({
         stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 2, message: { chat: { id: 123456 }, text: 'right chat' } }] }),
+          text: JSON.stringify({ ok: true, result: [{ update_id: 2, message: { chat: { id: Number(CHAT) }, text: 'right chat' } }] }),
           truncated: false,
         },
       })
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
 
     const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
 
@@ -222,57 +467,31 @@ describe('telegram-answerer wired answer path', () => {
   })
 
   it('falls through when the answer deadline elapses before a reply', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
-    let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
-      polls += 1
-      return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
-    })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 1 })
-
-    // The poll deadline expires with no reply, so the answerer falls through and
-    // the ask fails closed with NO_ANSWERER.
-    await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] }))
-      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
-  })
-
-  it('falls through when Telegram rejects the send', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
-    const { executor } = shell(async () => shellResult({ exitCode: 1, stdout: { text: 'curl failed', truncated: false } }))
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      // A non-array poll result contributes nothing; the loop then hits its deadline.
+      return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: null }), truncated: false } })
+    }, { timeoutMs: 1 })
 
     await expect(ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] }))
       .rejects.toMatchObject({ name: 'UserQuestionError', code: 'NO_ANSWERER' })
   })
 
   it('skips a malformed getUpdates response and eventually answers', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
     let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
       polls += 1
       if (polls === 1) return shellResult({ stdout: { text: 'not json', truncated: false } })
       return shellResult({
         stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: 123456 }, text: 'after bad json' } }] }),
+          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: Number(CHAT) }, text: 'after bad json' } }] }),
           truncated: false,
         },
       })
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
 
     const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
 
@@ -280,25 +499,20 @@ describe('telegram-answerer wired answer path', () => {
     expect(polls).toBe(2)
   })
 
-  it('skips a non-ok getUpdates response and eventually answers', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
+  it('skips a non-ok getUpdates envelope and eventually answers', async () => {
     let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
       polls += 1
-      if (polls === 1) return shellResult({ stdout: { text: JSON.stringify({ ok: false }), truncated: false } })
+      if (polls === 1) return shellResult({ stdout: { text: JSON.stringify({ ok: false, description: 'restarted' }), truncated: false } })
       return shellResult({
         stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: 123456 }, text: 'after bad ok' } }] }),
+          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: Number(CHAT) }, text: 'after bad ok' } }] }),
           truncated: false,
         },
       })
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
 
     const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
 
@@ -306,35 +520,11 @@ describe('telegram-answerer wired answer path', () => {
     expect(polls).toBe(2)
   })
 
-  it('uses the default timeout ceiling when no config is supplied', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
-      return shellResult({
-        stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 1, message: { chat: { id: 123456 }, text: 'default timeout' } }] }),
-          truncated: false,
-        },
-      })
-    })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx)
-
-    const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
-
-    expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'default timeout' }] })
-  })
-
-  it('ignores a callback from the wrong chat and an update with neither callback nor message', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
+  it('ignores malformed updates, wrong-chat callbacks, and uncorrelated callbacks before answering', async () => {
     let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
       polls += 1
       if (polls === 1) {
         return shellResult({
@@ -342,9 +532,10 @@ describe('telegram-answerer wired answer path', () => {
             text: JSON.stringify({
               ok: true,
               result: [
-                { update_id: 1, callback_query: { from: { id: 999999 }, data: 'opt:0' } },
-                { update_id: 2 },
-                { update_id: 3, callback_query: { from: { id: 123456 } } },
+                'garbage',
+                { update_id: 1, callback_query: { from: { id: 999999 }, data: 'opt:0:x', message: { message_id: 100 } } },
+                { update_id: 2, callback_query: { from: { id: Number(CHAT) }, data: 'opt:0:x', message: { message_id: 55 } } },
+                { update_id: 3, callback_query: { from: { id: Number(CHAT) }, message: { message_id: 100 } } },
               ],
             }),
             truncated: false,
@@ -353,88 +544,15 @@ describe('telegram-answerer wired answer path', () => {
       }
       return shellResult({
         stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 4, message: { chat: { id: 123456 }, text: 'final' } }] }),
+          text: JSON.stringify({ ok: true, result: [{ update_id: 4, callback_query: { from: { id: Number(CHAT) }, data: 'opt:0:abc', message: { message_id: 100 } } }] }),
           truncated: false,
         },
       })
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
 
-    const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
-
-    expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'final' }] })
-    expect(polls).toBe(2)
-  })
-
-  it('ignores updates with no update_id, from-only id, and empty text before a valid reply', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
-    let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
-      polls += 1
-      if (polls === 1) {
-        return shellResult({
-          stdout: {
-            text: JSON.stringify({
-              ok: true,
-              result: [
-                { message: { from: { id: 123456 }, text: '' } },
-                { update_id: 5, message: { from: { id: 999999 }, text: 'wrong chat' } },
-              ],
-            }),
-            truncated: false,
-          },
-        })
-      }
-      return shellResult({
-        stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 6, message: { chat: { id: 123456 }, text: 'the end' } }] }),
-          truncated: false,
-        },
-      })
+    const answer = await ctx.userQuestions.ask({
+      questions: [{ id: 'q', question: 'Pick', options: [{ label: 'A' }] }],
     })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
-
-    const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
-
-    expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'the end' }] })
-    expect(polls).toBe(2)
-  })
-
-  it('ignores a callback with no from id and then answers from a valid callback', async () => {
-    const ctx = new Context()
-    await ctx.plugin(UserQuestionService)
-
-    let polls = 0
-    const { executor } = shell(async (spec) => {
-      if (spec.command.includes('sendMessage')) return shellResult({ stdout: { text: JSON.stringify({ ok: true }), truncated: false } })
-      polls += 1
-      if (polls === 1) {
-        return shellResult({
-          stdout: {
-            text: JSON.stringify({ ok: true, result: [{ update_id: 1, callback_query: { from: {} } }] }),
-            truncated: false,
-          },
-        })
-      }
-      return shellResult({
-        stdout: {
-          text: JSON.stringify({ ok: true, result: [{ update_id: 2, callback_query: { from: { id: 123456 }, data: 'opt:0' } }] }),
-          truncated: false,
-        },
-      })
-    })
-    ctx.provide('shell', executor)
-    ctx.provide('credentials', credentials({ token: 'tok', chatId: '123456' }))
-    applyAnswerer(ctx, { timeoutMs: 2000 })
-
-    const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Pick', options: [{ label: 'A' }] }] })
 
     expect(answer).toEqual({ answers: [{ id: 'q', selected: ['A'] }] })
     expect(polls).toBe(2)

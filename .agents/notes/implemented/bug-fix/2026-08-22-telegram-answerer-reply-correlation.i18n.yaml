@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-22-telegram-answerer-reply-correlation.md
+2026-08-22-telegram-answerer-reply-correlation.md: 6a0ea7b09bf347cd12f1681c8fa52d8abb17eae6
+2026-08-22-telegram-answerer-reply-correlation.zh.md: c2dffe31fc9b0c4657c5d0d3f3feae5376a07a6d
