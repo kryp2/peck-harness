@@ -157,3 +157,78 @@ describe('buildInvocation: stdin transcript', () => {
   })
 })
 
+describe('buildInvocation: model alias resolution', () => {
+  it('passes an uncatalogued model id through to --model unchanged', () => {
+    // Claude Code rejects unknown aliases with a clear error; the serializer
+    // must not silently rewrite or drop ids outside its catalog.
+    const inv = buildInvocation(genOpts({ model: 'claude-opus-4-999' }), conn())
+    const i = inv.args.indexOf('--model')
+    expect(inv.args[i + 1]).toBe('claude-opus-4-999')
+  })
+})
+
+describe('buildInvocation: stdin transcript block rendering', () => {
+  it('labels a message whose source kind is tool with [tool]', () => {
+    const msg = {
+      id: 'm1', role: 'user', source: { kind: 'tool', callId: 'call-1' },
+      content: [{ type: 'text', text: 'result payload' }],
+    } as unknown as Message
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('[tool]\nresult payload')
+  })
+
+  it('treats a message without content blocks as an empty user turn', () => {
+    // Durable log data carries `content` as nullish more often than the
+    // type admits; the renderer must fall back to zero blocks, not crash.
+    const msg = { id: 'm1', role: 'user', source: undefined } as unknown as Message
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('[user]\n')
+  })
+
+  it('wraps reasoning blocks in <thinking> tags so prior context survives', () => {
+    const msg = {
+      id: 'm1', role: 'assistant', source: { kind: 'model', provider: 'claude-cli', model: 'sonnet' },
+      content: [
+        { type: 'reasoning', text: 'pondering the question' },
+        { type: 'text', text: 'The answer.' },
+      ],
+    } as unknown as Message
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('<thinking>\npondering the question\n</thinking>')
+    expect(inv.stdin).toContain('The answer.')
+  })
+
+  it('renders image blocks as a placeholder without attachment internals', () => {
+    const msg = {
+      id: 'm1', role: 'user', source: undefined,
+      content: [{ type: 'image', attachment: {} }],
+    } as unknown as Message
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('[image attachment]')
+  })
+
+  it('renders tool-call blocks as <tool_use> with id and name', () => {
+    const msg = {
+      id: 'm1', role: 'assistant', source: { kind: 'model', provider: 'claude-cli', model: 'sonnet' },
+      content: [{ type: 'tool-call', id: 'call-9', name: 'echo', arguments: '{"text":"hi"}' }],
+    } as unknown as Message
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('<tool_use id="call-9" name="echo">\n{"text":"hi"}\n</tool_use>')
+  })
+
+  it('renders non-text tool-result parts as bracketed placeholders and omits the error tag when absent', () => {
+    const msg = {
+      id: 'm1', role: 'user', source: undefined,
+      content: [{
+        type: 'tool-result',
+        toolCallId: 'call-2',
+        content: [{ type: 'text', text: 'partial ' }, { type: 'image', attachment: {} }],
+      }],
+    } as unknown as Message
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('<tool_result id="call-2">')
+    expect(inv.stdin).not.toContain('[error]')
+    expect(inv.stdin).toContain('partial [image]')
+  })
+})
+

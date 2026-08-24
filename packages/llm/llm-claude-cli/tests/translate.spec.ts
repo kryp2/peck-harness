@@ -31,13 +31,16 @@ function chunksOf(translation: { chunks: readonly StreamChunk[] }): StreamChunk[
 
 describe('translate: ok payload', () => {
   it('emits one text block with the full result', () => {
-    const out = translate(okPayload(), undefined)
+    // Bound the payload so the terminal chunk's replayState can be compared
+    // exactly instead of through the untyped `expect.any(Object)`.
+    const payload = okPayload()
+    const out = translate(payload, undefined)
     expect(chunksOf(out)).toEqual([
       { type: 'block-start', index: 0, blockType: 'text' },
       { type: 'text-delta', index: 0, text: 'Hello, world.' },
       { type: 'block-end', index: 0, block: { type: 'text', text: 'Hello, world.' } },
       { type: 'usage', usage: { inputTokens: 100, outputTokens: 10 } },
-      { type: 'finish', reason: { kind: 'stop' }, replayState: { response: expect.any(Object) } },
+      { type: 'finish', reason: { kind: 'stop' }, replayState: { response: payload } },
     ])
   })
 

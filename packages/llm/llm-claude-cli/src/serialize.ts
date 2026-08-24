@@ -153,7 +153,10 @@ function serializeMessages(messages: readonly Message[], tools: readonly ToolSch
 
 function serializeOne(msg: Message): string {
   const role = roleLabel(msg)
-  const body = renderContent(msg.content)
+  // roleLabel already tolerates nullish content because durable log data
+  // carries the key nullish more often than the type admits; render the
+  // empty turn too instead of crashing after the label survived.
+  const body = renderContent((msg as { content?: readonly ContentBlock[] }).content ?? [])
   return `[${role}]\n${body}`
 }
 
