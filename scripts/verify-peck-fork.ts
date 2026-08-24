@@ -55,7 +55,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     id: 'fork-ci',
     title: 'Fork CI workflow adjustments',
     owner: 'peck',
-    patterns: ['.github/workflows/*.yml', 'scripts/ci-workflow.spec.ts'],
+    patterns: ['.github/workflows/*.yml', '.github/AGENTS.md', 'scripts/ci-workflow.spec.ts'],
     retirement: 'Reverts toward the upstream workflows once their trigger budgets and runner labels work for the fork.',
   },
   {

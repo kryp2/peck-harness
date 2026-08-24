@@ -2,13 +2,19 @@
 
 English | [中文](README.zh.md)
 
-Opt-in answerer on the `ctx.userQuestions` waterfall that asks the human over Telegram. When composed alongside the web-GUI answerer, the same `ask_user_question` is delivered to both channels; whichever the human answers first wins.
+Opt-in answerer racing on the `ctx.userQuestions` `'user-questions/ask'` event that asks the human over Telegram. Composed alongside the web-GUI answerer, the same `ask_user_question` is delivered to every channel at the same time; whichever the human answers first settles the ask, and this attempt is cancelled through its race signal when another channel wins.
 
 ## Role
 
-An answerer (provider) for the user-questions seam. It registers a `user-questions/ask` listener that posts each question to an authorized Telegram chat — with tap-selectable inline buttons when the question offers options, free text otherwise — and resolves the question from the first reply.
+An answerer for the user-questions seam. It registers a `user-questions/ask` listener that posts each question to an authorized Telegram chat — with tap-selectable inline buttons when the question offers options, free text otherwise — and claims the question from the first reply.
 
-Replies are correlated to the question they answer. Before an ask touches Telegram, the answerer drains every already-pending update by probing the bot's latest `update_id`, so history older than the question can never arrive during the poll, and the update cursor persists across asks. Inline-button presses are accepted only when they reference the message that very ask sent (each press carries a per-question nonce); free-text replies are accepted from the authorized chat once the question is posted. Asks are serialized behind one queue so concurrent questions never interleave sends and polls against one chat.
+Replies are correlated to the question they answer. Before an ask touches Telegram, the answerer drains every already-pending update by probing the bot's latest `update_id`, so history older than the question can never arrive during the poll, and the update cursor persists across asks. Inline-button presses are accepted only when they reference the message that very ask sent (each press carries a per-question nonce); free-text replies are accepted from the authorized chat once the question is posted. Asks are serialized behind one queue so concurrent questions never interleave sends and polls against one chat; an attempt whose race signal already fired when its queue turn arrives skips without touching Telegram.
+
+## Cancellation and loser cleanup
+
+The race signal from `ask()` is observed promptly: it rides every curl run, so a cancelled attempt kills its in-flight long-poll instead of waiting out the transport timeout, and the poll loop stops at its next turn. When the loss reason is `SUPERSEDED` — another channel answered — each posted message is edited best-effort (`editMessageText`) to append "(answered elsewhere)". On any other cancellation (caller abort, host teardown) nothing answered, so the sent message is left untouched rather than claiming an answer that did not happen. The edit never throws into the winner path: a failed edit silently leaves the stale message.
+
+Channel-internal failures (unconfigured credentials, transport errors, deadline elapsed without a reply) decline the race by resolving `undefined` so the other channels keep racing; only a composition where no channel claims produces the fail-closed `NO_ANSWERER`.
 
 ## Configuration
 
@@ -17,7 +23,7 @@ Credentials are read per operation from the credential provider under two refs:
 - `TELEGRAM_BOT_TOKEN` — the bot token from BotFather.
 - `TELEGRAM_CHAT_ID` — the authorized chat id; replies are accepted only from this chat.
 
-Transport is the Telegram Bot API over `ctx.shell` (curl). The tokened API URL reaches curl through a per-run environment entry, never through the command line, so the token stays out of argv. The answerer degrades to a no-op (falls through to the next answerer) when the shell or credentials are absent; a failed drain probe, send, or unreplied poll falls through as well.
+Transport is the Telegram Bot API over `ctx.shell` (curl). The tokened API URL reaches curl through a per-run environment entry, never through the command line, so the token stays out of argv. The answerer degrades to a no-op (declines) when the shell or credentials are absent.
 
 ## Model Experience
 

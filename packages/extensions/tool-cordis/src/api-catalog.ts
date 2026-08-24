@@ -2202,11 +2202,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   {
     key: 'userQuestions',
     summary: '`ctx.userQuestions`: the human-answer seam.',
-    description: '`ctx.userQuestions`: the human-answer seam. Answerers register on the `\'user-questions/ask\'` waterfall; `ask()` dispatches to them and returns the first answer.',
+    description: '`ctx.userQuestions`: the human-answer seam. Answerers register on the `\'user-questions/ask\'` event; `ask()` invokes them concurrently and returns the first claimed answer.',
     methods: [
       {
         signature: 'registerProvider(provider: UserQuestionProvider): () => void',
-        description: 'Register one answerer that collects the human answer. Retained as a shim over the \'user-questions/ask\' waterfall: it registers a listener that calls the provider\'s `ask`. New answerers should register on the waterfall directly (`ctx.on(\'user-questions/ask\', ...)`) so multiple channels can answer the same question and the first answer wins.',
+        description: 'Register one answerer that collects the human answer. Retained as a shim over the \'user-questions/ask\' event: it registers a listener that calls the provider\'s `ask`. New answerers should register on the event directly (`ctx.on(\'user-questions/ask\', ...)`) so multiple channels can race the same question and the first answer wins.',
         parameters: [{ name: 'provider', description: 'UI-side implementation that collects answers.' }],
         returns: 'Disposer that unregisters this provider.',
       },
@@ -2783,11 +2783,11 @@ export const EVENT_API: readonly EventApiEntry[] = [
   },
   {
     name: 'user-questions/ask',
-    mode: 'waterfall',
-    signature: '\'user-questions/ask\'(this: Scoped<UserQuestionService>, req: AskUserQuestionRequest, next: () => Promise<AskUserQuestionAnswer>): Promise<AskUserQuestionAnswer>',
-    summary: 'Ask composed answerers for one human answer.',
-    description: 'Ask composed answerers for one human answer. Return an answer to claim the question or call `next()`; the end of the chain is the fail-closed default (the caller observes a `UserQuestionError` code `NO_ANSWERER`). Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent\'s questions.',
-    parameters: [{ name: 'req', description: 'the pending question set (questions, owner agent, signal).' }],
+    mode: 'parallel',
+    signature: '\'user-questions/ask\'(this: Scoped<UserQuestionService>, req: AskUserQuestionRequest, signal: AbortSignal): Promise<AskUserQuestionAnswer | undefined>',
+    summary: 'One racing attempt of a human-answer dispatch.',
+    description: 'One racing attempt of a human-answer dispatch. Every composed answerer is invoked with the same request at the same time (true racing, not a sequential chain): resolve with an answer to claim the question, resolve `undefined` to decline (the channel cannot or will not answer — the ask stays open for the other attempts), and reject only to report an authoritative failure in the seam\'s error taxonomy, which settles the whole ask for every channel. The first settlement wins; losing attempts receive `signal` aborted with a UserQuestionError reason naming why (`SUPERSEDED`, or the caller\'s own abort error). With no attempter composed, or after every attempt declined or failed as a channel, the fail-closed default applies (`UserQuestionError` code `NO_ANSWERER`). Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent\'s questions.',
+    parameters: [{ name: 'req', description: 'the pending question set (questions, owner agent).' }, { name: 'signal', description: 'race signal, aborted once this attempt can no longer affect the outcome; its `reason` carries the settling error.' }],
   },
   {
     name: 'webserver/index-inject',

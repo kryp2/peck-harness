@@ -647,10 +647,13 @@ interface PendingQuestion {
   rpcId: RpcId
   sessionId: SessionId
   questions: AskUserQuestionItem[]
-  resolve: (answer: AskUserQuestionAnswer) => void
+  resolve: (answer: AskUserQuestionAnswer | undefined) => void
   reject: (error: UserQuestionError) => void
   signal?: AbortSignal
   onAbort?: () => void
+  /** The dispatch's race signal; aborted when another channel settled the ask first. */
+  raceSignal?: AbortSignal
+  onLoss?: () => void
 }
 
 /** Validate one answer batch against the exact question request it resolves. */
@@ -1301,30 +1304,45 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     if (pending.signal !== undefined && pending.onAbort !== undefined) {
       pending.signal.removeEventListener('abort', pending.onAbort)
     }
+    if (pending.raceSignal !== undefined && pending.onLoss !== undefined) {
+      pending.raceSignal.removeEventListener('abort', pending.onLoss)
+    }
     broadcast({
       type: 'question/resolved', sessionId: pending.sessionId,
       questionRpcId: pending.rpcId, outcome,
     })
   }
 
-  const disposeQuestionAnswerer = ctx.on('user-questions/ask', (request: AskUserQuestionRequest) => {
+  const disposeQuestionAnswerer = ctx.on('user-questions/ask', (request: AskUserQuestionRequest, raceSignal: AbortSignal) => {
     const sessionId = request.agent?.id
     if (sessionId === undefined) {
       return Promise.reject(new UserQuestionError(
         'web user interaction requires an agent-owned session', 'ASK_MISSING_AGENT'))
     }
-    return new Promise<AskUserQuestionAnswer>((resolve, reject) => {
+    // Resolves `undefined` rather than hanging when this channel loses the race:
+    // the GUI surface is withdrawn here, while the answer itself travels from
+    // whichever channel won. The wire vocabulary has no superseded outcome, so
+    // the withdrawal broadcasts as 'cancelled' — the client treats both as
+    // "stop showing this question".
+    return new Promise<AskUserQuestionAnswer | undefined>((resolve, reject) => {
       const rpcId = RpcId(randomUUID())
       const pending: PendingQuestion = {
         rpcId, sessionId, questions: request.questions, resolve, reject,
         ...(request.signal === undefined ? {} : { signal: request.signal }),
+        raceSignal,
       }
       const onAbort = (): void => {
         claimQuestion(pending, 'cancelled')
         reject(new UserQuestionError(
           'ask_user_question was aborted before the user answered', 'ASK_ABORTED'))
       }
+      // Race loss: withdraw the surface and release this attempt without a claim.
+      const onLoss = (): void => {
+        claimQuestion(pending, 'cancelled')
+        resolve(undefined)
+      }
       pending.onAbort = onAbort
+      pending.onLoss = onLoss
       pendingQuestions.set(rpcId, pending)
       request.signal?.addEventListener('abort', onAbort, { once: true })
       const envelope: RpcRequest<MuxFrame> = {
@@ -1332,6 +1350,12 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         payload: { type: 'question/requested', sessionId, questions: request.questions },
       }
       for (const queue of muxQueues) queue.push(envelope)
+      // Loss subscription comes after publication: an attempt scheduled before
+      // this one may have settled synchronously and aborted the race signal
+      // already. Attaching first would broadcast the withdrawal before the
+      // request frame and strand a phantom question on every client.
+      if (raceSignal.aborted) onLoss()
+      else raceSignal.addEventListener('abort', onLoss, { once: true })
     })
   })
   ctx.effect(() => () => {

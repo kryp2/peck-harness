@@ -2467,7 +2467,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/interaction/telegram-answerer/src/index.ts:99`](../packages/interaction/telegram-answerer/src/index.ts)
+Source: [`packages/interaction/telegram-answerer/src/index.ts:113`](../packages/interaction/telegram-answerer/src/index.ts)
 
 <a id="deepseek-aidsh-terminal-bash"></a>
 

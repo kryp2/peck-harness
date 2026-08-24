@@ -145,15 +145,15 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
 
 ### `ctx.userQuestions` — `UserQuestionService`
 
-`ctx.userQuestions`: the human-answer seam. Answerers register on the `'user-questions/ask'` waterfall; `ask()` dispatches to them and returns the first answer.
+`ctx.userQuestions`: the human-answer seam. Answerers register on the `'user-questions/ask'` event; `ask()` invokes them concurrently and returns the first claimed answer.
 
 ```ts cordis-catalog
 /**
  * Register one answerer that collects the human answer. Retained as a shim
- * over the {@link 'user-questions/ask'} waterfall: it registers a listener that
- * calls the provider's `ask`. New answerers should register on the waterfall
+ * over the {@link 'user-questions/ask'} event: it registers a listener that
+ * calls the provider's `ask`. New answerers should register on the event
  * directly (`ctx.on('user-questions/ask', ...)`) so multiple channels can
- * answer the same question and the first answer wins.
+ * race the same question and the first answer wins.
  *
  * @param provider UI-side implementation that collects answers.
  * @returns Disposer that unregisters this provider.
@@ -185,23 +185,33 @@ Source: [`packages/interaction/user-questions/src/index.ts`](../../packages/inte
 
 ### `user-questions/*` events
 
-<a id="user-questionsask--waterfall"></a>
+<a id="user-questionsask--parallel"></a>
 
-#### `user-questions/ask` — waterfall
+#### `user-questions/ask` — parallel
 
-Ask composed answerers for one human answer. Return an answer to claim the question or call `next()`; the end of the chain is the fail-closed default (the caller observes a `UserQuestionError` code `NO_ANSWERER`). Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent's questions.
+One racing attempt of a human-answer dispatch. Every composed answerer is invoked with the same request at the same time (true racing, not a sequential chain): resolve with an answer to claim the question, resolve `undefined` to decline (the channel cannot or will not answer — the ask stays open for the other attempts), and reject only to report an authoritative failure in the seam's error taxonomy, which settles the whole ask for every channel. The first settlement wins; losing attempts receive `signal` aborted with a UserQuestionError reason naming why (`SUPERSEDED`, or the caller's own abort error). With no attempter composed, or after every attempt declined or failed as a channel, the fail-closed default applies (`UserQuestionError` code `NO_ANSWERER`). Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent's questions.
 
 ```ts cordis-catalog
 /**
- * Ask composed answerers for one human answer. Return an answer to claim the
- * question or call `next()`; the end of the chain is the fail-closed default
- * (the caller observes a `UserQuestionError` code `NO_ANSWERER`).
+ * One racing attempt of a human-answer dispatch. Every composed answerer is
+ * invoked with the same request at the same time (true racing, not a
+ * sequential chain): resolve with an answer to claim the question, resolve
+ * `undefined` to decline (the channel cannot or will not answer — the ask
+ * stays open for the other attempts), and reject only to report an
+ * authoritative failure in the seam's error taxonomy, which settles the
+ * whole ask for every channel. The first settlement wins; losing attempts
+ * receive `signal` aborted with a {@link UserQuestionError} reason naming
+ * why (`SUPERSEDED`, or the caller's own abort error). With no attempter
+ * composed, or after every attempt declined or failed as a channel, the
+ * fail-closed default applies (`UserQuestionError` code `NO_ANSWERER`).
  * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners
  * receive only that agent's questions.
- * @param req - the pending question set (questions, owner agent, signal).
- * @mode waterfall
+ * @param req - the pending question set (questions, owner agent).
+ * @param signal - race signal, aborted once this attempt can no longer
+ *   affect the outcome; its `reason` carries the settling error.
+ * @mode parallel
  */
-'user-questions/ask'(this: Scoped<UserQuestionService>, req: AskUserQuestionRequest, next: () => Promise<AskUserQuestionAnswer>): Promise<AskUserQuestionAnswer>
+'user-questions/ask'(this: Scoped<UserQuestionService>, req: AskUserQuestionRequest, signal: AbortSignal): Promise<AskUserQuestionAnswer | undefined>
 ```
 
 Types: [Scoped](scope.md)

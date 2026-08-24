@@ -24,7 +24,7 @@ After every upstream sync, or whenever the gate reports a missing baseline:
 | Group | Owner | Allowed paths | Upstreaming / retirement | Validation today |
 |---|---|---|---|---|
 | Agent Notes (fork decision records) | peck | `.agents/notes/**` | Decisions stay until archived; generic fixes go upstream through GitHub Discussions | `verify-agent-note-classification`, `verify-agent-note-format`, translation pairing |
-| Fork CI workflow adjustments | peck | `.github/workflows/*.yml`, `scripts/ci-workflow.spec.ts` | Reverts once upstream trigger budgets and runner labels work for this fork | `scripts/ci-workflow.spec.ts` |
+| Fork CI workflow adjustments | peck | `.github/workflows/*.yml`, `.github/AGENTS.md`, `scripts/ci-workflow.spec.ts` | Reverts once upstream trigger budgets and runner labels work for this fork | `scripts/ci-workflow.spec.ts` |
 | Fork runbooks and status documents | peck | `IN_FLIGHT.md`, `PECK_DEPLOYMENT_TRAPS.md`, `PECK_HARNESS_BUILD_PLAN.md` | Deleted when the distribution plan completes and fork operations match upstream documentation | Markdown gates (`verify-md-links`, `verify-md-wrap`) |
 | Repository security metadata | peck | `.gitleaksignore` | Entries drop when the flagged false positive disappears | gitleaks scanning |
 | Regenerated references and paired counterparts | upstream-shared | `THIRD_PARTY_NOTICES.md`, `docs/config-catalog.*`, `docs/event-producer-consumer.*`, `docs/persistence-catalog.*`, `docs/subsystems/extensions.*`, `docs/subsystems/user-questions.*`, `packages/core/scope/src/scoped-events.generated.ts` | Never retired separately; generators re-derive them from whatever the diverged sources contain | catalog freshness gates in `doc-sync`; lefthook regenerates notices on dependency changes |
