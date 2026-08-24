@@ -139,12 +139,44 @@ describe('web-app runtime glue', () => {
     expect(assembly.sections.find(entry => entry.name === 'harness:source')?.text).toContain('DeepSeek Harness implementation checkout')
     const section = assembly.sections.find(entry => entry.name === 'app:web-surface')
     expect(section?.text).toContain('http://127.0.0.1:4567')
+    // The deployment default keeps the upstream-neutral product name.
+    expect(section?.text).toContain('the DeepSeek Harness Web GUI at http://127.0.0.1:4567')
     // The single update contract: the receiver is always on; no-refresh
     // reloads additionally need the rebuild watcher.
     expect(section?.text).toContain('pnpm run dev:web')
     const webRuntime = contributions.find(contribution => contribution.name === 'web-runtime')
     expect(webRuntime?.resolve()).toEqual({ DSH_WEB_URL: 'http://127.0.0.1:4567' })
     await ctx.fiber.dispose()
+  })
+
+  it('renders the configured product name in the surface section and the variable description', async () => {
+    stageDist()
+    const ctx = new Context()
+    ctx.provide('webServer', fakeHttpServer().server)
+    const contributions: BashContribution[] = []
+    ctx.provide('shellEnv', {
+      register: (contribution: BashContribution) => {
+        contributions.push(contribution)
+        return () => {}
+      },
+    } as never)
+    apply(ctx, new Config({ openBrowser: false, printUrl: false, productName: 'Peck Harness', surfaceContext: true, trustedHosts: [] }))
+    await ctx.plugin(SystemPrompt, { persona: '' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const section = (await ctx.systemPrompt.assemble()).sections.find(entry => entry.name === 'app:web-surface')
+    expect(section?.text).toContain('the Peck Harness Web GUI at http://127.0.0.1:4567')
+    const webRuntime = contributions.find(contribution => contribution.name === 'web-runtime')
+    expect(webRuntime?.variables.DSH_WEB_URL?.description).toBe('Canonical local URL of the Peck Harness Web GUI serving this session.')
+    await ctx.fiber.dispose()
+  })
+
+  it('fails loud on a blank product name instead of rendering "the  Web GUI"', () => {
+    stageDist()
+    const ctx = new Context()
+    ctx.provide('webServer', fakeHttpServer().server)
+    expect(() => {
+      apply(ctx, new Config({ openBrowser: false, printUrl: false, productName: '   ', surfaceContext: true, trustedHosts: [] }))
+    }).toThrow('productName must not be blank')
   })
 
   it('publishes no readiness side effect when printing and browser opening are disabled', async () => {

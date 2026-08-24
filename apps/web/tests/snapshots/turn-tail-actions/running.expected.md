@@ -27,7 +27,7 @@
   - img
   - text: Bash Print alpha to stdout
 - paragraph: partial
-- status: Pecking...
+- status: Deep diving...
 - textbox "Message the agent"
 - button "Commands":
   - img

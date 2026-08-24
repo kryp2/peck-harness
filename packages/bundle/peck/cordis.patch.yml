@@ -1,0 +1,55 @@
+# The dsh-peck bundle patch: the Peck product layer over dsh-web-app.
+#
+# Applied after web-app's insert; rows here override earlier rows by id, with
+# the profile's own cordis.patch.yml and any --patch overlays still to come.
+# A patch replaces the targeted row's whole `config`, so each override below
+# restates every key it keeps.
+#
+# Everything Peck-branded or Peck-product-specific composes HERE, so the
+# generic bundles stay upstream-neutral: without this layer a profile boots
+# the stock DeepSeek Harness surface.
+
+# ── brand: swap the official brand occupants for the Peck ones ─────────────
+#
+# Both packages fill the same single-occupant brand slots (sidebar mark/name,
+# hero mark), so exactly one may be active per composition. Disabling rather
+# than deleting keeps the web-app layer's row visible and reversible: an
+# overlay above this one can re-enable it to restore official branding.
+
+- id: ui-brand-official
+  disabled: true
+
+- insert:
+    # Unconditional Peck brand fill plus the Peck palette theme layer.
+    - id: ui-brand-peck
+      name: '@deepseek-ai/dsh-client-ui-brand-peck'
+
+# ── product rows ────────────────────────────────────────────────────────────
+
+# The deployment default preset becomes the Peck agent composition (persona,
+# standard toolset, opt-in Peck packages). Requires the matching shipped
+# preset directory from the same distribution:
+# apps/cli/config/agent-presets/peck. A default no root supplies fails loud at
+# the first session resolution, which is the intended missing-distribution
+# signal.
+- id: agent-presets
+  config:
+    default: peck
+
+# Restate the web-app values verbatim (a patch replaces the whole config) and
+# add this product's name for the model-visible surface section and the
+# DSH_WEB_URL description.
+- id: web-runtime
+  inject: [webStartup]
+  config:
+    openBrowser: !!js ctx.webStartup.openBrowser
+    printUrl: true
+    productName: Peck Harness
+    surfaceContext: true
+    trustedHosts: !!js ctx.webStartup.trustedHosts
+
+# Opt-in Peck host packages are NOT composed here. Their dependency
+# declarations ride in this bundle's manifest so bare rows resolve from the
+# profile module fallback, but the composition choice belongs to an agent
+# preset (apps/cli/config/agent-presets/peck), where each stays disabled until
+# a deployment enables it.

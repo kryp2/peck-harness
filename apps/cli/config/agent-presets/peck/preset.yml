@@ -1,0 +1,3 @@
+name: Peck 模式
+description: 面向 Peck 产品的标准编码 Agent：完整标准能力，携带 Peck persona，并预置可选的 Peck 宿主包（默认禁用）。
+order: 5

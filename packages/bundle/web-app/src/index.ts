@@ -45,6 +45,12 @@ export interface Config {
   /** Print the URL line on activation; a non-interactive layer can turn it off. */
   printUrl: boolean
   /**
+   * Deployment product name rendered into the model-visible surface context and
+   * the `DSH_WEB_URL` variable description. A distribution layer (a later
+   * bundle patch) overrides it; every other composition keeps the default.
+   */
+  productName?: string
+  /**
    * Register the model-visible surface context (the `app:web-surface` prompt
    * section and the `DSH_WEB_URL` bash variable). A one-shot non-interactive
    * layer can turn it off when its user is not in the GUI, so the
@@ -55,9 +61,13 @@ export interface Config {
   trustedHosts: string[]
 }
 
+/** Product name the upstream-neutral composition presents. */
+const DEFAULT_PRODUCT_NAME = 'DeepSeek Harness'
+
 export const Config: z<Config> = z.object({
   openBrowser: z.boolean().default(true),
   printUrl: z.boolean().default(true),
+  productName: z.string().default(DEFAULT_PRODUCT_NAME),
   surfaceContext: z.boolean().default(true),
   trustedHosts: z.array(String).default([]),
 })
@@ -139,11 +149,11 @@ export function resolveLanTrust(bindHost: string, extra: readonly string[]): Web
 }
 
 /** Model-visible orientation and acceptance boundary for sessions created through `dsh web`. */
-function webSurfacePrompt(webUrl: string): string {
+function webSurfacePrompt(webUrl: string, productName: string): string {
   const updateContract = 'The client-plugin HMR receiver is active, but client-plugin changes reload without a refresh only while '
     + '`pnpm run dev:web` is also running from this same checkout to rebuild their bundles; verify that watcher before promising automatic updates. '
     + 'Every other change — the apps/web shell and plain packages — requires rebuilding the affected Web artifacts and verifying this existing URL after a page refresh. '
-  return `You are interacting with the user through the Peck Harness Web GUI at ${webUrl}. `
+  return `You are interacting with the user through the ${productName} Web GUI at ${webUrl}. `
     + 'When the user refers to "this page", "this GUI", or "this app" without naming another target, they mean this GUI. '
     + 'The browser provides no implicit DOM, route, or screenshot context. '
     + updateContract
@@ -224,6 +234,12 @@ export const internals: {
  * @param config - validated {@link Config}.
  */
 export function apply(ctx: Context, config: Config): void {
+  // The schema defaults an omitted name; the explicit fallback keeps that
+  // defaulting owned here rather than hidden, and a configured BLANK name
+  // still fails loud instead of rendering "the  Web GUI" in every sentence
+  // that interpolates it.
+  const productName = (config.productName ?? DEFAULT_PRODUCT_NAME).trim()
+  if (productName === '') throw new Error('web-app: productName must not be blank')
   const runtime = resolveLanTrust(ctx.webServer.host, config.trustedHosts)
   // The loopback URL belongs to this host. Under SSH, the operator reaches it
   // through a local forwarding address that this process cannot derive.
@@ -237,14 +253,14 @@ export function apply(ctx: Context, config: Config): void {
       promptCtx.systemPrompt.section({
         name: 'app:web-surface',
         order: -98,
-        text: () => webSurfacePrompt(localWebUrl(promptCtx)),
+        text: () => webSurfacePrompt(localWebUrl(promptCtx), productName),
       })
     })
     ctx.inject(['shellEnv'], (runtimeCtx) => {
       runtimeCtx.shellEnv.register({
         name: 'web-runtime',
         variables: {
-          [DSH_WEB_URL]: { description: 'Canonical local URL of the Peck Harness Web GUI serving this session.' },
+          [DSH_WEB_URL]: { description: `Canonical local URL of the ${productName} Web GUI serving this session.` },
         },
         resolve: () => ({ [DSH_WEB_URL]: localWebUrl(runtimeCtx) }),
       })
