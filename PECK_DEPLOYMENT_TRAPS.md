@@ -6,7 +6,7 @@ symptom → cause → fix. Verified facts, with the command that proved them.
 
 Not a design doc: decisions about shipped source belong in `.agents/notes/`.
 
-Deployment shape (2026-08-18):
+Deployment shape (verified 2026-08-18; unchanged by the 2026-08-22 restart — current deployed state lives in [`IN_FLIGHT.md`](IN_FLIGHT.md)):
 
 - `dsh-web.service` (user unit) → `bin.js web --trusted-host 10.10.0.2`, binds `127.0.0.1:3080`
 - `dsh-wg-bridge.service` (user unit) → `socat TCP-LISTEN:3080,bind=10.10.0.2 → 127.0.0.1:3080`
@@ -161,10 +161,7 @@ actually sees, read the **served** bundle, not the source:
 curl -s 'http://127.0.0.1:3080/plugins/@deepseek-ai/dsh-client-ui-layout/client.js' | grep -c 1024
 ```
 
-Current deployment is from 2026-08-18 02:45 and is behind `master`. Note the
-`pnpm` mismatch before rebuilding: `node_modules` was installed by 9.15.9 while
-the manifest pins 11.7.0, so the reinstall must be a deliberate, server-down
-window — never a purge under the live server.
+The served build is a snapshot: it only moves when someone rebuilds and restarts, so it always trails `master`. Judge what the phone actually sees from the **served** bundle (above), and record/refresh the deployed state — commit, date, toolchain — in [`IN_FLIGHT.md`](IN_FLIGHT.md), not here. Before any rebuild, confirm the installed `pnpm` matches the manifest pin (`npx -y pnpm@11.7.0` since 2026-08-22); a version mismatch is repaired only as a deliberate, server-down reinstall — never a purge under the live server.
 
 ---
 
