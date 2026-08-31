@@ -156,6 +156,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Workspace and gate registration of peck packages',
     owner: 'upstream-shared',
     patterns: [
+      'knip.json',
       'pnpm-lock.yaml',
       'tsconfig.base.json',
       'tsconfig.client.json',
