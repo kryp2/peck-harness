@@ -80,6 +80,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'THIRD_PARTY_NOTICES.md',
       'docs/config-catalog.*',
       'docs/event-producer-consumer.*',
+      'docs/module-graph.*',
       'docs/persistence-catalog.*',
       'docs/subsystems/extensions.*',
       'docs/subsystems/user-questions.*',
