@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/peck-fork.md
-peck-fork.md: d34e853fcf3b3a08897428096b9e2215906c4360
-peck-fork.zh.md: 6bf5283aba96254ce1e5f92cd23b3017b67ad321
+peck-fork.md: 0a51c9d5b0b5e6573b7b1013e8b37ae17b006e36
+peck-fork.zh.md: c6e02532429b7be8022ccf1e1d2f16a71482686d
