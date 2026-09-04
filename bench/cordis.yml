@@ -14,7 +14,7 @@
     providers:
       opencode-go-chat:
         displayName: OpenCode Go Chat
-        apiKeyEnv: OPENCODE_API_KEY
+        apiKeyEnv: OPENCODE_GO_API_KEY
         api: openai-completions
         baseURL: https://opencode.ai/zen/go/v1
         compat:
@@ -31,7 +31,7 @@
               high: high
       opencode-go-responses:
         displayName: OpenCode Go Responses
-        apiKeyEnv: OPENCODE_API_KEY
+        apiKeyEnv: OPENCODE_GO_API_KEY
         api: openai-responses
         baseURL: https://opencode.ai/zen/go/v1
         models:

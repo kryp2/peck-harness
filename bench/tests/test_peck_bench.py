@@ -12,7 +12,12 @@ class PeckBenchTest(unittest.TestCase):
         suite_id, cases = peck_bench.load_suite(peck_bench.DEFAULT_SUITE)
         models = peck_bench.load_models(peck_bench.DEFAULT_MODELS)
         self.assertEqual(suite_id, "coding-v1")
-        self.assertEqual([case.case_id for case in cases], ["python-pagination-boundary"])
+        self.assertEqual([case.case_id for case in cases], [
+            "python-pagination-boundary",
+            "python-jsonl-aggregation",
+            "python-retry-policy",
+            "python-config-merge",
+        ])
         self.assertEqual(set(models), {"omen-alpha", "muse-spark-1.3-contributor"})
 
     def test_paired_order_alternates(self) -> None:
@@ -64,6 +69,16 @@ class PeckBenchTest(unittest.TestCase):
                 "start = page_number * page_size", "start = (page_number - 1) * page_size"
             ), encoding="utf-8")
             self.assertTrue(peck_bench.grade(case, workspace)["passed"])
+
+    def test_every_hidden_grader_rejects_its_baseline(self) -> None:
+        _, cases = peck_bench.load_suite(peck_bench.DEFAULT_SUITE)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for case in cases:
+                with self.subTest(case=case.case_id):
+                    workspace = root / case.case_id
+                    shutil.copytree(case.fixture, workspace)
+                    self.assertFalse(peck_bench.grade(case, workspace)["passed"])
 
 
 if __name__ == "__main__":

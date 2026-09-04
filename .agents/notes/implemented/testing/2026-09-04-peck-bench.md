@@ -16,6 +16,10 @@ Benchmark orchestration consumes the Harness; it is not an agent capability. Kee
 
 Runs alternate model order between repetitions and copy fixtures before every attempt. Deterministic graders own pass/fail. Provider usage is stored when present and remains unknown when absent. Routing decisions require multiple repetitions and inspection of raw artifacts, not only the summary table.
 
+The first suite uses four small Python maintenance tasks: pagination boundaries, validated JSON Lines aggregation, HTTP retry policy, and non-mutating recursive configuration merge. Distinct defect classes make aggregate results less dependent on one implementation pattern, while compact fixtures keep repeated comparisons inexpensive.
+
+Both benchmark routes read `OPENCODE_GO_API_KEY`, matching the installed `OpenCode Go (responses)` provider. This avoids accidentally benchmarking with an unrelated OpenCode client credential whose workspace can have different Contributor data-policy consent.
+
 ## Security limitation
 
 The first version isolates the working directory by copying a fixture but does not provide an operating-system sandbox. Fixtures contain no credentials or production state. Sandbox-backed execution is required before admitting untrusted models or sensitive repositories.
@@ -32,4 +36,4 @@ The first version isolates the working directory by copying a fixture but does n
 
 Peck Bench can compare OpenCode Go models through an identical Harness composition, preserve run evidence, and reject a broken patch with deterministic code outside the model workspace. Alternating order reduces systematic first-run bias, while repetitions expose result variance.
 
-The benchmark adds Python orchestration and a separate provider-route declaration for each wire protocol. The copied workspace is not an operating-system sandbox, cost remains unknown when provider events omit it, and one small Python fixture does not support a general model-ranking claim.
+The benchmark adds Python orchestration and a separate provider-route declaration for each wire protocol. The copied workspace is not an operating-system sandbox, cost remains unknown when provider events omit it, and four small Python fixtures still do not support a general model-ranking claim.

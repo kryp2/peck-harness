@@ -4,6 +4,8 @@ English | [中文](README.zh.md)
 
 Peck Bench compares models through one DeepSeek Harness composition. Every run gets a fresh copy of the same fixture, prompt, tools, timeout, and grader; only the provider route and model change. Hidden grader code remains outside the copied model workspace.
 
+The `coding-v1` suite covers pagination boundaries, validated JSON Lines aggregation, HTTP retry policy, and non-mutating recursive configuration merge. The cases exercise distinct implementation and validation behavior instead of repeating one defect class.
+
 ## Run
 
 Install this checkout's SDK after `pnpm install`, validate without an API call, then run the paired comparison. The runner uses the source JSON-RPC runtime inside a Harness checkout and the SDK's bundled runtime outside one.
@@ -11,7 +13,7 @@ Install this checkout's SDK after `pnpm install`, validate without an API call, 
 ```sh
 python -m pip install -e python/sdk
 python bench/peck_bench.py validate
-export OPENCODE_API_KEY=...
+export OPENCODE_GO_API_KEY=...
 python bench/peck_bench.py run --repetitions 3
 ```
 
