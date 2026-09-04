@@ -1,0 +1,12 @@
+{
+  "id": "coding-v1",
+  "cases": [
+    {
+      "id": "python-pagination-boundary",
+      "fixture": "../fixtures/python-pagination-boundary",
+      "prompt_file": "prompt.md",
+      "grader": ["python3", "{bench_root}/graders/python_pagination_boundary.py", "{workspace}"],
+      "timeout_seconds": 300
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "omen-alpha": {
+    "provider": "opencode-go-chat",
+    "model": "omen-alpha"
+  },
+  "muse-spark-1.3-contributor": {
+    "provider": "opencode-go-responses",
+    "model": "muse-spark-1.3-contributor"
+  }
+}
