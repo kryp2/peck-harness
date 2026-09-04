@@ -7,6 +7,27 @@
       "prompt_file": "prompt.md",
       "grader": ["python3", "{bench_root}/graders/python_pagination_boundary.py", "{workspace}"],
       "timeout_seconds": 300
+    },
+    {
+      "id": "python-jsonl-aggregation",
+      "fixture": "../fixtures/python-jsonl-aggregation",
+      "prompt_file": "prompt.md",
+      "grader": ["python3", "{bench_root}/graders/python_jsonl_aggregation.py", "{workspace}"],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "python-retry-policy",
+      "fixture": "../fixtures/python-retry-policy",
+      "prompt_file": "prompt.md",
+      "grader": ["python3", "{bench_root}/graders/python_retry_policy.py", "{workspace}"],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "python-config-merge",
+      "fixture": "../fixtures/python-config-merge",
+      "prompt_file": "prompt.md",
+      "grader": ["python3", "{bench_root}/graders/python_config_merge.py", "{workspace}"],
+      "timeout_seconds": 300
     }
   ]
 }

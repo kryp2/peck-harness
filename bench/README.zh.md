@@ -4,6 +4,8 @@
 
 Peck Bench 通过同一套 DeepSeek Harness 组合来比较模型。每次运行都会获得同一 fixture（测试前置数据）、提示、工具、超时和评分器的全新副本；只有提供方路由和模型不同。隐藏的评分器代码位于复制给模型的工作区之外。
 
+`coding-v1` 套件涵盖分页边界、经过验证的 JSON Lines 聚合、HTTP 重试策略，以及不修改输入的递归配置合并。这些用例覆盖不同的实现与验证行为，而不是重复同一种缺陷。
+
 ## 运行
 
 运行 `pnpm install` 后安装当前检出版本的 SDK，在不调用 API 的情况下验证配置，然后运行配对比较。在 Harness 检出目录内，运行器使用源码 JSON-RPC 运行时；在该目录外，则使用 SDK 自带的运行时。
@@ -11,7 +13,7 @@ Peck Bench 通过同一套 DeepSeek Harness 组合来比较模型。每次运行
 ```sh
 python -m pip install -e python/sdk
 python bench/peck_bench.py validate
-export OPENCODE_API_KEY=...
+export OPENCODE_GO_API_KEY=...
 python bench/peck_bench.py run --repetitions 3
 ```
 
