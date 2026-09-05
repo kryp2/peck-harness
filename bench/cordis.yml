@@ -1,5 +1,4 @@
-# Benchmark-owned unattended agent composition. The routes are separate because
-# Omen and Muse use different OpenCode Go wire protocols.
+# Benchmark-owned unattended agent composition. The benchmark routes preserve each gateway's required wire protocol.
 - id: sdk-jsonrpc-server
   name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
   config:
@@ -46,6 +45,16 @@
               medium: medium
               high: high
               xhigh: xhigh
+      commandcode:
+        displayName: Command Code
+        apiKeyEnv: COMMANDCODE_API_KEY
+        api: openai-completions
+        baseURL: https://api.commandcode.ai/provider/v1
+        models:
+          - id: deepseek/deepseek-v4-flash
+            name: DeepSeek V4 Flash
+            contextWindow: 1000000
+            maxTokens: 131072
 
 - id: subprocess
   name: '@deepseek-ai/dsh-subprocess-local'
