@@ -10,7 +10,7 @@ Direct model comparisons confound model quality with different agent tools, prom
 
 ## Decision
 
-Model comparisons use the public Python SDK and one benchmark-owned Harness composition. Each model receives a fresh fixture copy and the same prompt, tools, timeout, output cap, and deterministic external grader. The initial matrix contains Omen Alpha and Muse Spark 1.3 Contributor through separate OpenCode Go routes because their wire protocols differ.
+Model comparisons use the public Python SDK and one benchmark-owned Harness composition. Each model receives a fresh fixture copy and the same prompt, tools, timeout, output cap, and deterministic external grader. The matrix contains Omen Alpha and Muse Spark 1.3 Contributor through separate OpenCode Go routes, plus DeepSeek V4 Flash through Command Code; the routes preserve each gateway's required wire protocol.
 
 Benchmark orchestration consumes the Harness; it is not an agent capability. Keeping it under `bench/` prevents scoring policy and provider prices from entering the agent loop or a published package. The SDK preserves the Harness session events for later behavioral graders.
 

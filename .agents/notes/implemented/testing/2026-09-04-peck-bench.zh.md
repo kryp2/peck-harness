@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-模型比较使用公开 Python SDK 和一套由 benchmark（基准测试）拥有的 Harness 组合。每个模型都会获得全新的 fixture（测试前置数据）副本，以及相同的提示、工具、超时、输出上限和确定性外部评分器。初始矩阵包含 Omen Alpha 和 Muse Spark 1.3 Contributor；由于两者的 wire protocol（传输协议）不同，它们使用独立的 OpenCode Go 路由。
+模型比较使用公开 Python SDK 和一套由 benchmark（基准测试）拥有的 Harness 组合。每个模型都会获得全新的 fixture（测试前置数据）副本，以及相同的提示、工具、超时、输出上限和确定性外部评分器。矩阵包含使用不同 OpenCode Go 路由的 Omen Alpha 和 Muse Spark 1.3 Contributor，以及通过 Command Code 使用的 DeepSeek V4 Flash；各路由保留对应网关所需的 wire protocol（传输协议）。
 
 Benchmark 编排消费 Harness；它不是智能体能力。将其放在 `bench/` 下，可避免评分策略和提供方价格进入 agent loop（智能体循环）或已发布包。SDK 会保留 Harness 会话事件，供后续行为评分器使用。
 

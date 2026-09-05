@@ -14,9 +14,10 @@ Peck Bench 通过同一套 DeepSeek Harness 组合来比较模型。每次运行
 python -m pip install -e python/sdk
 python bench/peck_bench.py validate
 export OPENCODE_GO_API_KEY=...
+export COMMANDCODE_API_KEY=...
 python bench/peck_bench.py run --repetitions 3
 ```
 
-使用 `--model omen-alpha` 只选择一个模型，使用 `--output DIR` 更改运行产物位置。每次运行都会保留复制的工作区、Harness 会话日志、评分器输出和结果 JSON。每次尝试完成后，套件都会写入 `summary.json` 和 `summary.md`。
+使用 `--model omen-alpha` 只选择一个模型，使用 `--output DIR` 更改运行产物位置。默认矩阵通过各自配置的网关比较 Omen Alpha、Muse Spark 1.3 Contributor 和 DeepSeek V4 Flash。每次运行都会保留复制的工作区、Harness 会话日志、评分器输出和结果 JSON。每次尝试完成后，套件都会写入 `summary.json` 和 `summary.md`。
 
 Fixture 不得包含 secret（密钥）或生产配置。Harness 工具从复制的 fixture 开始运行，但此 MVP 并非操作系统 sandbox（沙箱）。不要将其用于不受信任的模型或敏感的主机状态。确定性评分器决定通过或失败。缺失的提供方用量保持未知，而不会被估算；路由决策需要多次重复运行。
