@@ -1,6 +1,12 @@
 # IN_FLIGHT — deepseek-harness (Peck fork)
 _Sist oppdatert: 2026-08-24 (bølge 3 kjørt: #24 + #25 åpne [HOLD]-stakk, #86 åpen)_
 
+## Bench status (English, 2026-09-07)
+
+The interrupted DeepSeek Flash benchmark change is being delivered from `feat/complete-deepseek-benchmark-2026-09-07`. The original Sept 4 branch and all raw run artifacts are preserved. `bench/cordis.yml` adds the Command Code route and `bench/models.json` includes `deepseek-v4-flash`. The smoke report records four successful cases per model for DeepSeek V4 Flash, Omen Alpha, and Muse Spark; each case ran once, costs are unknown, and these results do not establish a model ranking.
+
+Validation after recovery: the suite/model manifest validates and all seven benchmark unit tests pass. Next: harden grader timeout/process-failure recording before larger repeated comparisons. The previously mentioned stacked grader-hardening PR was not created; no such branch was found during recovery.
+
 ## Sist gjort
 - 24.08: **Bølge 3**: **#24 [HOLD]** `deployment-refusal`-guard (`packages/guard/deployment-refusal`; eksplisitte fakta exposure/authKind + preset lest fra owning service; nekt ved remote+none+danger-full-access med tiltak i feilen; 21 tester inkl. real-Loader-composition, 100 % coverage, composed ingen steder). **#25 [HOLD-stakk på #24]** Peck composition layer: `peck`-preset + `packages/bundle/peck` + `ui-brand-peck` (brand slots fylles ubetinget, palette som overrideTokens-lag); generiske flater (system-prompt, cordis-preset, primitives, theme, web-app, ui-brand-official) restaurert BYTE-EKSAKT mot upstream merge-base `b150a551b8d4` — fremtidige syncs konfliktfrie. doc-sync 29/29, typecheck ren, test:web:built 281 grønn under official artifacts.
 - 24.08: **Alle fire beslutningene tatt av Thomas**: true racing (02), egen VM+gVisor/Docker (03), dispatch-only ci-master (04), receipt-spesifikasjon green-lightet (01).
