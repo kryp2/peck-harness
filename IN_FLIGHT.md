@@ -1,9 +1,11 @@
 # IN_FLIGHT — deepseek-harness (Peck fork)
 _Sist oppdatert: 2026-08-24 (bølge 3 kjørt: #24 + #25 åpne [HOLD]-stakk, #86 åpen)_
 
-## Bench status (English, 2026-09-05)
+## Bench status (English, 2026-09-07)
 
-PR1 branch `feat/deepseek-flash-benchmark-2026-09-04` resumes the dirty Sept 4 DeepSeek Flash benchmark change: `bench/cordis.yml` gains the `commandcode` route for `deepseek/deepseek-v4-flash`, `bench/models.json` gains the `deepseek-v4-flash` alias, and `bench/reports/2026-09-04-coding-v1-smoke.md` records the verified local smoke evidence (DeepSeek V4 Flash 4/4 passed, mean 62.124 s; Omen Alpha 4/4, mean 28.372 s; Muse Spark 1.3 Contributor 4/4, mean 27.294 s; single repetition `r01`, costs unknown, no ranking). A stacked PR2 branch on top hardens grader failure handling in `bench/peck_bench.py` only.
+The interrupted DeepSeek Flash benchmark change is being delivered from `feat/complete-deepseek-benchmark-2026-09-07`. The original Sept 4 branch and all raw run artifacts are preserved. `bench/cordis.yml` adds the Command Code route and `bench/models.json` includes `deepseek-v4-flash`. The smoke report records four successful cases per model for DeepSeek V4 Flash, Omen Alpha, and Muse Spark; each case ran once, costs are unknown, and these results do not establish a model ranking.
+
+Validation after recovery: the suite/model manifest validates and all seven benchmark unit tests pass. Next: harden grader timeout/process-failure recording before larger repeated comparisons. The previously mentioned stacked grader-hardening PR was not created; no such branch was found during recovery.
 
 ## Sist gjort
 - 24.08: **Bølge 3**: **#24 [HOLD]** `deployment-refusal`-guard (`packages/guard/deployment-refusal`; eksplisitte fakta exposure/authKind + preset lest fra owning service; nekt ved remote+none+danger-full-access med tiltak i feilen; 21 tester inkl. real-Loader-composition, 100 % coverage, composed ingen steder). **#25 [HOLD-stakk på #24]** Peck composition layer: `peck`-preset + `packages/bundle/peck` + `ui-brand-peck` (brand slots fylles ubetinget, palette som overrideTokens-lag); generiske flater (system-prompt, cordis-preset, primitives, theme, web-app, ui-brand-official) restaurert BYTE-EKSAKT mot upstream merge-base `b150a551b8d4` — fremtidige syncs konfliktfrie. doc-sync 29/29, typecheck ren, test:web:built 281 grønn under official artifacts.
