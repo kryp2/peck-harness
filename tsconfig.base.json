@@ -247,7 +247,6 @@
       "@deepseek-ai/dsh-llm-claude-cli/invariant": ["./packages/llm/llm-claude-cli/src/invariant.ts"],
       "@deepseek-ai/dsh-peck": ["./packages/bundle/peck/src/index.ts"],
       "@deepseek-ai/dsh-peck/invariant": ["./packages/bundle/peck/src/invariant.ts"],
-      "@deepseek-ai/dsh-client-ui-brand-peck": ["./packages/client/ui-brand-peck/src/index.ts"],
       "@deepseek-ai/dsh-session-usage": ["./packages/session/session-usage/src/index.ts"],
       "@deepseek-ai/dsh-session-usage/invariant": ["./packages/session/session-usage/src/invariant.ts"],
       "@deepseek-ai/dsh-telegram-answerer": ["./packages/interaction/telegram-answerer/src/index.ts"],

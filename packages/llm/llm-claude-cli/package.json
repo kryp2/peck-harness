@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-llm-claude-cli",
-  "description": "Claude-CLI subprocess adapter for the DeepSeek Harness LLM seam — bridges GenerateOptions to `claude --print --output-format json` so a DSH agent can run on Claude models without an Anthropic API key.",
+  "description": "Claude-CLI subprocess adapter for the DeepSeek Harness LLM seam \u2014 bridges GenerateOptions to `claude --print --output-format json` so a DSH agent can run on Claude models without an Anthropic API key.",
   "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
@@ -18,23 +18,17 @@
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./invariant": {
-      "types": "./lib/types/invariant.d.ts",
-      "default": "./lib/invariant.js"
-    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
-    "lib/invariant.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/dsh-credentials": "workspace:^",
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-timeout": "workspace:^",
@@ -42,7 +36,6 @@
   },
   "devDependencies": {
     "@deepseek-ai/dsh-credentials": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-timeout": "workspace:^",

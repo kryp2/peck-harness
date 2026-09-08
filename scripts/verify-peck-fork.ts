@@ -55,7 +55,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     id: 'fork-ci',
     title: 'Fork CI workflow adjustments',
     owner: 'peck',
-    patterns: ['.github/workflows/*.yml', '.github/AGENTS.md', 'scripts/ci-workflow.spec.ts'],
+    patterns: ['.github/workflows/*.yml', '.github/AGENTS.md', 'scripts/ci-workflow.spec.ts', 'scripts/tests/ci-master-platforms.spec.ts', 'scripts/tests/ci-release-selfhosted.spec.ts'],
     retirement: 'Reverts toward the upstream workflows once their trigger budgets and runner labels work for the fork.',
   },
   {
@@ -104,7 +104,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
   },
   {
     id: 'peck-composition',
-    title: 'Peck composition layer (product bundle, client brand package, agent preset)',
+    title: 'Peck composition layer (product bundle, removed brand package, agent preset)',
     owner: 'peck',
     patterns: [
       'apps/cli/config/agent-presets/peck/**',
@@ -119,6 +119,8 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     owner: 'upstream-shared',
     patterns: [
       'packages/core/agent/**',
+      'packages/core/agent-loop/src/inbox.ts',
+      'packages/core/agent-loop/tests/inbox.spec.ts',
       'packages/core/session/src/known-event-types.ts',
       'packages/client/ui-agent-preset/**',
       'packages/extensions/cordis-host-runner/**',
@@ -128,6 +130,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'packages/interaction/tool-ask-user/**',
       'packages/interaction/user-questions/**',
       'packages/plan/plan-mode/tests/plan-mode.spec.ts',
+      'packages/preset/agent-presets/src/display.ts',
       'packages/session/README.*',
     ],
     retirement: 'Each change either lands upstream through GitHub Discussions when generic, or is deliberately re-applied across every upstream sync.',

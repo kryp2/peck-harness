@@ -72,7 +72,7 @@ kind: "package-reference"
 | [`src/index.ts`](src/index.ts) | 插件入口：`name`/`inject`/`apply`、注册 effect |
 | [`src/projection.ts`](src/projection.ts) | `usageByRoute` 投影定义与折叠 |
 | [`src/types.ts`](src/types.ts) + [`src/client.ts`](src/client.ts) | 单源投影键类型；宿主（`./types`）与客户端（`./client`）命名空间投影 |
-| [`src/invariant.ts`](src/invariant.ts) | 预留包所有权的运行时不变量伴随件 |
+| — | 不发布运行时不变量伴随件；全日志折叠契约由 projection 测试强制执行。 |
 | — | 客户端命名空间归属是全仓纪律；这里唯一的 fork 契约是整日志折叠，由投影测试强制保证。 |
 
 </details>

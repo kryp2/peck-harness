@@ -66,7 +66,7 @@ A metered receipt is only useful if every party hashes the same bytes. `canonica
 | [`src/index.ts`](src/index.ts) | Schema definitions, canonicalization, verification, the `meteredReceipts` projection, plugin entry |
 | [`src/types.ts`](src/types.ts) | Receipt and summary TypeScript types |
 | [`vectors/receipt-vectors.json`](vectors/receipt-vectors.json) | Cross-language golden vectors asserted by the test suites |
-| [`src/invariant.ts`](src/invariant.ts) | Runtime invariant companion reserving package ownership |
+| — | No runtime invariant companion is published; every receipt contract is enforced by the schema, canonicalization, and projection tests. |
 
 </details>
 

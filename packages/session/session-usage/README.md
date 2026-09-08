@@ -72,7 +72,7 @@ This section explains the fold semantics behind the read model; the observable b
 | [`src/index.ts`](src/index.ts) | Plugin entry: `name`/`inject`/`apply`, registration effect |
 | [`src/projection.ts`](src/projection.ts) | The `usageByRoute` projection definition and fold |
 | [`src/types.ts`](src/types.ts) + [`src/client.ts`](src/client.ts) | Single-source projection-key types; host (`./types`) and client (`./client`) namespace projections |
-| [`src/invariant.ts`](src/invariant.ts) | Runtime invariant companion reserving package ownership |
+| — | No runtime invariant companion is published; the whole-log fold contract is enforced by the projection tests. |
 | — | Client-namespace ownership is a repo-wide discipline; the only fork-authored contract here is the whole-log fold, enforced by the projection tests. |
 
 </details>

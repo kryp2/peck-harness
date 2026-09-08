@@ -66,7 +66,7 @@ kind: "package-reference"
 | [`src/index.ts`](src/index.ts) | Schema 定义、规范化、验证、`meteredReceipts` 投影、插件入口 |
 | [`src/types.ts`](src/types.ts) | 收据与摘要的 TypeScript 类型 |
 | [`vectors/receipt-vectors.json`](vectors/receipt-vectors.json) | 测试套件断言的跨语言黄金向量 |
-| [`src/invariant.ts`](src/invariant.ts) | 预留包所有权的运行时不变量伴随件 |
+| — | 不发布运行时不变量伴随件；所有回执契约均由 schema、规范化与 projection 测试强制执行。 |
 
 </details>
 

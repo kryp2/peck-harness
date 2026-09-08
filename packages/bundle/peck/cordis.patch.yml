@@ -9,20 +9,16 @@
 # generic bundles stay upstream-neutral: without this layer a profile boots
 # the stock DeepSeek Harness surface.
 
-# ── brand: swap the official brand occupants for the Peck ones ─────────────
+# ── brand: leave the official brand occupants off ────────────────────────────
 #
-# Both packages fill the same single-occupant brand slots (sidebar mark/name,
-# hero mark), so exactly one may be active per composition. Disabling rather
-# than deleting keeps the web-app layer's row visible and reversible: an
-# overlay above this one can re-enable it to restore official branding.
+# Upstream's official package registers its sidebar occupants only in `official`
+# builds; any other build shows the shell fallbacks. Disabling the row keeps the
+# web-app layer's row visible and reversible: an overlay above this one can
+# re-enable it to restore official branding. Peck's own product identity rides
+# the product rows below (preset default, product name), not a brand package.
 
 - id: ui-brand-official
   disabled: true
-
-- insert:
-    # Unconditional Peck brand fill plus the Peck palette theme layer.
-    - id: ui-brand-peck
-      name: '@deepseek-ai/dsh-client-ui-brand-peck'
 
 # ── product rows ────────────────────────────────────────────────────────────
 
