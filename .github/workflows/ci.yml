@@ -118,7 +118,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       # Redirect the Node compile cache (enabled by pnpm and TypeScript) off
       # the root partition's /tmp before the first pnpm call in this lane —
@@ -180,7 +179,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -240,7 +238,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       # Redirect the Node compile cache (enabled by pnpm and TypeScript) off
       # the root partition's /tmp before the first pnpm call in this lane —
@@ -353,7 +350,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       # Shared hosts keep version installs and generated caches inside runner temp.
       - name: Isolate compatibility caches
@@ -453,7 +449,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
       - name: Enable Developer Mode (symlink support)
         shell: pwsh
         run: >-
@@ -503,7 +498,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
       # Checkout removes the gitignored duration history, so restore it from
       # the GitHub cache before coverage and save the updated one afterwards.
       # The coordinator then weights partitions by measured durations on the
@@ -572,7 +566,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          fetch-depth: 0
       - name: Enable Developer Mode (symlink support)
         shell: pwsh
         run: >-
@@ -621,6 +614,8 @@ jobs:
     env:
       DSH_PUBLINT_CONCURRENCY: '8'
     steps:
+      # Fetch complete history: this lane repeats the static aggregate, whose
+      # fork-divergence gate resolves the recorded upstream merge-base.
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
