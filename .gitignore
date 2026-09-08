@@ -1,6 +1,8 @@
 CLAUDE.local.md
 .env
 node_modules/
+bench/runs/
+bench/**/__pycache__/
 lib/
 *.tsbuildinfo
 pnpm-debug.log

@@ -67,10 +67,17 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
   },
   {
     id: 'repo-metadata',
-    title: 'Repository security metadata',
+    title: 'Repository-local metadata',
     owner: 'peck',
-    patterns: ['.gitleaksignore'],
-    retirement: 'Entries drop when the flagged false positive disappears from the scanned files.',
+    patterns: ['.gitignore', '.gitleaksignore'],
+    retirement: 'Entries drop when the fork-owned generated artifacts or flagged false positives disappear.',
+  },
+  {
+    id: 'model-benchmark',
+    title: 'Peck model benchmark',
+    owner: 'peck',
+    patterns: ['bench/**'],
+    retirement: 'Remains fork-owned while Peck compares gateway models through its Harness composition.',
   },
   {
     id: 'generated-references',
@@ -80,6 +87,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'THIRD_PARTY_NOTICES.md',
       'docs/config-catalog.*',
       'docs/event-producer-consumer.*',
+      'docs/module-graph.*',
       'docs/persistence-catalog.*',
       'docs/subsystems/extensions.*',
       'docs/subsystems/user-questions.*',
