@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/guard/deployment-refusal/README.md
-README.md: 539e5efda1e8381c627fd54f0483e35929fe8e7c
-README.zh.md: 30de6db8529e497c19b1b265598223ef8a469a8e
+README.md: a99bc41f454e98ce42db6949987e30ec3b7905d5
+README.zh.md: 7a21a9b08c4230c476f52de5f765683a7449eac1

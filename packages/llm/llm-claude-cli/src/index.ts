@@ -10,7 +10,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-settings'
 
 import {
   ClaudeCliAdapter,
@@ -31,7 +31,7 @@ export type { ClaudeCliCatalogModel, ClaudeCliConnectionOptions } from './serial
 export const name = 'llm-claude-cli'
 export const inject = ['llm']
 
-const NS = settingsNamespace('llm-claude-cli')
+const NS = 'llm-claude-cli'
 /** The single provider route this plugin owns. */
 const PROVIDER = 'claude-cli'
 
@@ -142,14 +142,16 @@ export function apply(ctx: Context, config: Config): void {
   // `claude-cli-bedrock`) would re-register here on route changes.
   ctx.llm.registerAdapter([PROVIDER], adapter)
 
-  installSettingsSection(ctx, NS, Config, config, {
-    setSource: (source) => {
-      currentSource = source
-    },
-    onChange: () => {
-      // Re-validation on settings change happens through `options()` above;
-      // the adapter instance does not need re-registration.
-    },
+  ctx.inject(['settings'], (settingsCtx) => {
+    settingsCtx.settings.installSection(ctx, NS, Config, config, {
+      setSource: (source: () => Config) => {
+        currentSource = source
+      },
+      onChange: () => {
+        // Re-validation on settings change happens through `options()` above;
+        // the adapter instance does not need re-registration.
+      },
+    })
   })
 
   // Surface the resolved config once at mount so deployments can see the

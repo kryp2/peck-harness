@@ -17,6 +17,7 @@ import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
+import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import {
   apply,
   Config,
@@ -40,6 +41,7 @@ afterEach(async () => {
 /** Mount a real sandbox-policy owner carrying `mode` and register its disposal. */
 async function mountPolicy(mode: SandboxMode): Promise<Context> {
   const ctx = new Context()
+  await ctx.plugin(SessionProjectionRegistry)
   await ctx.plugin(SandboxPolicyService, { mode })
   DISPOSERS.push(() => ctx.fiber.dispose())
   return ctx
@@ -176,6 +178,7 @@ export const apply = (ctx, config) => globalThis.__deploymentRefusalGuard.apply(
     ].join('\n'))
 
     const ctx = new Context()
+    await ctx.plugin(SessionProjectionRegistry)
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access' })
     await ctx.plugin(Loader)
     ctx.loader.builtins.include = Include

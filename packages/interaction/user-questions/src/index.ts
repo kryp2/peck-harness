@@ -8,7 +8,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/dsh-agent'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import { scopeTarget } from '@deepseek-ai/dsh-scope'
 import type { Scoped } from '@deepseek-ai/dsh-scope'
@@ -42,7 +42,9 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-import type { AskUserQuestionAnswer, AskUserQuestionItem } from './types.ts'
+import type {
+  AskUserQuestionAnswer, AskUserQuestionRequestEvent,
+} from './types.ts'
 
 export type {
   AskUserQuestionAnswer, AskUserQuestionAnswerItem, AskUserQuestionIntent, AskUserQuestionItem,
@@ -50,19 +52,7 @@ export type {
 } from './types.ts'
 
 /** Request for a human answer. */
-export interface AskUserQuestionRequest {
-  /** Questions to display. */
-  questions: AskUserQuestionItem[]
-  /** Exact live calling agent, when the request came from an agent tool call. */
-  agent?: Agent
-  /** Abort signal for the owning tool/step. */
-  signal?: AbortSignal
-}
-
-/** UI-side provider for user questions. */
-export interface UserQuestionProvider {
-  ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>
-}
+export interface AskUserQuestionRequest extends AskUserQuestionRequestEvent {}
 
 /**
  * One answerer invocation contract on the `'user-questions/ask'` event:
@@ -73,6 +63,11 @@ export type UserQuestionAttempt = (
   request: AskUserQuestionRequest,
   signal: AbortSignal,
 ) => Promise<AskUserQuestionAnswer | undefined>
+
+/** UI-side provider for user questions. */
+export interface UserQuestionProvider {
+  ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>
+}
 
 /** Stable error taxonomy for user-questions failures. */
 export class UserQuestionError extends HarnessError {
@@ -194,6 +189,31 @@ export function raceUserQuestionAttempts(
  * `'user-questions/ask'` event; `ask()` invokes them concurrently and returns
  * the first claimed answer.
  */
+
+function abortedQuestion(cause?: unknown): UserQuestionError {
+  return new UserQuestionError(
+    'ask_user_question was aborted before the user answered',
+    'ASK_ABORTED',
+    cause === undefined ? undefined : { cause },
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function restoreUserQuestionError(reason: unknown): unknown {
+  if (reason instanceof UserQuestionError) return reason
+  if (isRecord(reason)
+    && reason.name === 'UserQuestionError'
+    && typeof reason.message === 'string'
+    && typeof reason.code === 'string') {
+    return new UserQuestionError(reason.message, reason.code, { cause: reason })
+  }
+  return reason
+}
+
+/** `ctx.userQuestions`: validation plus the scoped answerer race. */
 export class UserQuestionService extends Service {
   constructor(ctx: Context) {
     super(ctx, 'userQuestions')
@@ -224,14 +244,15 @@ export class UserQuestionService extends Service {
    *
    * @param request Questions, owner agent, and abort signal.
    * @returns The answer chosen or typed by the human.
-   * @throws {UserQuestionError} code `CALLER_NOT_LIVE` when a supplied
-   *   agent is not the registry's exact live instance, or `DELEGATED_CALLER`
-   *   when that live agent is owned by another agent, or `NO_ANSWERER` when
-   *   no answerer is composed (fail closed).
+   * @throws {UserQuestionError} code `ASK_ABORTED` when the supplied signal
+   *   is already or becomes aborted, `CALLER_NOT_LIVE` when a supplied agent
+   *   is not the registry's exact live instance, `DELEGATED_CALLER` when that
+   *   live agent is owned by another agent, or `NO_ANSWERER` when no answerer
+   *   is composed (fail closed).
    */
   async ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer> {
     if (request.signal?.aborted) {
-      throw new UserQuestionError('ask_user_question was aborted before the user answered', 'ASK_ABORTED')
+      throw abortedQuestion()
     }
     if (request.questions.length === 0) {
       throw new UserQuestionError('ask_user_question requires at least one question', 'EMPTY_QUESTIONS')
@@ -283,7 +304,74 @@ export class UserQuestionService extends Service {
     const attempts = this.ctx.events.dispatch(
       'parallel', [scopeTarget(this, request.agent), 'user-questions/ask', request],
     ) as unknown as UserQuestionAttempt[]
-    return await raceUserQuestionAttempts(attempts, request, request.signal)
+    if (attempts.length === 0) {
+      // Single-channel composition: run the scoped waterfall directly (exact
+      // contract: transported-error restoration, in-flight abort
+      // normalization), then translate its internal absence signal. The
+      // waterfall's `NO_PROVIDER` means "no listener accepted the request";
+      // at this service's boundary that is the same fail-closed state as an
+      // empty race field, so callers observe one code (`NO_ANSWERER`)
+      // regardless of which composition style left the ask unanswered.
+      const noAnswerer = (): Promise<AskUserQuestionAnswer> => Promise.reject(new UserQuestionError(
+        'no user-questions answerer accepted the request',
+        'NO_PROVIDER',
+      ))
+      try {
+        return await (agent === undefined
+          ? this.ctx.waterfall('user-questions/request', request, noAnswerer)
+          : this.ctx.waterfall(
+            scopeTarget(agent, agent),
+            'user-questions/request',
+            { ...request, agent },
+            noAnswerer,
+          ))
+      } catch (error) {
+        const restored = restoreUserQuestionError(error)
+        if (restored instanceof UserQuestionError && restored.code === 'NO_PROVIDER') {
+          throw new UserQuestionError(
+            'no user-questions answerer is composed',
+            'NO_ANSWERER',
+            { cause: restored },
+          )
+        }
+        if (restored instanceof UserQuestionError) throw restored
+        if (request.signal?.aborted) {
+          throw abortedQuestion(error)
+        }
+        throw restored
+      }
+    }
+    // Multi-channel composition: the scoped waterfall races as one attempt
+    // beside the event answerers, so the web-GUI channel and racing channels
+    // (Telegram, test stubs) settle the same ask. An unanswered waterfall is
+    // one declining channel, not a verdict: its internal absence signal (the
+    // waterfall's `NO_PROVIDER`, "no listener accepted the request") and
+    // foreign channel failures free its slot, while a seam-taxonomy rejection
+    // still settles authoritatively. When every channel declines, the ask
+    // fails closed with `NO_ANSWERER` from the race engine below. The
+    // waterfall observes the race signal, so a win elsewhere withdraws its
+    // pending question too.
+    const waterfallAttempt: UserQuestionAttempt = async (raceRequest, raceSignal) => {
+      const noWaterfallAnswerer = (): Promise<AskUserQuestionAnswer> => Promise.reject(new UserQuestionError(
+        'no user-questions answerer accepted the request',
+        'NO_PROVIDER',
+      ))
+      try {
+        return await (agent === undefined
+          ? this.ctx.waterfall('user-questions/request', { ...raceRequest, signal: raceSignal }, noWaterfallAnswerer)
+          : this.ctx.waterfall(
+            scopeTarget(agent, agent),
+            'user-questions/request',
+            { ...raceRequest, agent, signal: raceSignal },
+            noWaterfallAnswerer,
+          ))
+      } catch (error) {
+        const restored = restoreUserQuestionError(error)
+        if (restored instanceof UserQuestionError && restored.code !== 'NO_PROVIDER') throw restored
+        return undefined
+      }
+    }
+    return await raceUserQuestionAttempts([...attempts, waterfallAttempt], request, request.signal)
   }
 }
 

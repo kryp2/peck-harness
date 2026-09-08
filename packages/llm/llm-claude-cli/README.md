@@ -1,32 +1,39 @@
+---
+description: "The claude --print subprocess adapter for the harness LLM service: runs Claude models through a local Claude Code CLI with OAuth, for users and maintainers choosing a keyless Claude route."
+kind: "package-reference"
+---
+
 # @deepseek-ai/dsh-llm-claude-cli
 
 English | [中文](README.zh.md)
 
 > Status: **V1 prototype.** Tested against Claude Code 2.1.x. See [Known Limitations and Deferred Work](#known-limitations-and-deferred-work) before adopting for production work.
 
-`claude --print --output-format json` adapter for the DeepSeek Harness LLM seam. Lets a DSH agent run on Claude models without an `ANTHROPIC_API_KEY` by shelling out to a locally-installed Claude Code CLI. Authentication flows through the host's own Claude subscription (Pro/Max OAuth) — the harness carries no Anthropic credentials.
+## Summary
 
-## Model catalog
+`@deepseek-ai/dsh-llm-claude-cli` is the Claude adapter for the harness LLM service: it owns the `claude-cli` provider route and translates one `claude --print --output-format json` subprocess call per request into the harness stream-chunk protocol. With it a DSH agent runs on Claude models without an `ANTHROPIC_API_KEY`, because authentication flows through the host's own Claude subscription (Pro/Max OAuth) — the harness carries no Anthropic credentials. It is the keyless sibling of `@deepseek-ai/dsh-llm-deepseek`: pick this route when the deployment already pays for Claude Code, pick DeepSeek's API adapter when it holds a DeepSeek key instead.
 
-| Wire alias | Underlying model (Claude Code 2.1.x) | Notes |
-|---|---|---|
-| `sonnet` | Claude Sonnet 4.5 | default; matched by `--settings` model pin |
-| `haiku` | Claude Haiku 4.5 | cheap tier for cost-sensitive loops |
-| `opus` | Claude Opus 4.x | gated by subscription tier; may be unavailable |
+## Table of Contents
 
-The bridge does not see the underlying model id directly; it surfaces Claude Code's `modelUsage` payload in the session log for diagnostics.
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
 
-## Why this exists
+-----
 
-`@deepseek-ai/dsh-llm-deepseek` speaks the DeepSeek chat-completions API. This package is its sibling for users whose preferred model is Claude and who already pay for Claude Code. The bridge collapses `GenerateOptions` to one `claude --print` call and parses the resulting JSON document back into harness `StreamChunk`s.
+<a id="use-this-package"></a>
+## Use this package
 
-## Install
+Mount this plugin when a composition runs Claude models through a locally-installed Claude Code CLI. It registers the single `claude-cli` route and resolves connection facts per request, so a composition entry plus an optional user settings section drive the whole adapter.
 
-```sh
-pnpm install
-```
+### When to choose it
 
-Add to your `cordis.yml`:
+Choose this adapter when the deployment's preferred model is Claude and the host already pays for Claude Code — no API key is configured anywhere, and OAuth stays the user's responsibility through Claude Code's own `/login` flow. Choose `dsh-llm-deepseek` when the deployment holds a DeepSeek API key instead. Registering any other adapter for `claude-cli` fails with `DUPLICATE_ADAPTER`.
+
+### Minimal configuration
 
 ```yaml
 - id: llm-claude-cli
@@ -44,7 +51,27 @@ Add to your `cordis.yml`:
 
 The plugin registers one provider route: `claude-cli`. Point a DSH `GenerateOptions` at it with `provider: "claude-cli"` and any of the configured model aliases.
 
-## Wire protocol
+| Field | Default | Meaning |
+|---|---|---|
+| `binary` | `claude` | Binary path; must resolve on `$PATH` |
+| `settingsJson` | sonnet + medium effort | JSON string passed verbatim to `--settings` |
+| `maxTokens` | `32000` | Default per-request output cap |
+| `maxSystemPromptChars` | `32000` | Soft cap on `--system-prompt` length before warning + truncation |
+| `models` | sonnet + haiku + opus | Advisory catalog shown by discovery consumers |
+
+The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-llm-claude-cli) is the exhaustive source for every accepted field and its JSDoc.
+
+### Model catalog
+
+| Wire alias | Underlying model (Claude Code 2.1.x) | Notes |
+|---|---|---|
+| `sonnet` | Claude Sonnet 4.5 | default; matched by `--settings` model pin |
+| `haiku` | Claude Haiku 4.5 | cheap tier for cost-sensitive loops |
+| `opus` | Claude Opus 4.x | gated by subscription tier; may be unavailable |
+
+The bridge does not see the underlying model id directly; it surfaces Claude Code's `modelUsage` payload in the session log for diagnostics.
+
+### Wire protocol
 
 ```
 GenerateOptions
@@ -70,25 +97,46 @@ StreamChunk[]   { block-start, text-delta, block-end, usage, finish }
 
 `--max-tokens` is intentionally NOT forwarded. Claude Code CLI 2.1.x rejects it as an unknown option; deployments needing a hard output cap should pin the model in `--settings` or rely on Claude Code's own `max_tokens` policy.
 
-## Public API
+-----
 
-| Export | Notes |
+<a id="understand-the-implementation"></a>
+## Understand the implementation
+
+<details>
+<summary>Implementation internals — click to expand</summary>
+
+This section explains the request/response translation behind the adapter; the observable behavior is fully covered in [Use this package](#use-this-package).
+
+### Design concept
+
+The bridge collapses `GenerateOptions` to one `claude --print` call and parses the resulting JSON document back into harness `StreamChunk`s. `resolveAdapterOptions()` is the single explicit resolve step from raw config to validated connection facts, and the adapter re-reads those facts per request through the `llm-claude-cli` settings section, so editing the user settings document changes the next request without a restart.
+
+### Source map
+
+| File | Role |
 |---|---|
-| `ClaudeCliAdapter` | extends `LlmAdapter`; one instance per plugin mount |
-| `Config` | schemastery schema; doubles as settings-section shape |
-| `apply` | Cordis function plugin entry; `inject: ['llm']` |
-| `resolveAdapterOptions(config)` | explicit resolve step, fail-loud |
-| `DEFAULT_CONTEXT_WINDOW` / `DEFAULT_MAX_TOKENS` / `DEFAULT_STREAM_IDLE_TIMEOUT_MS` | shared with the adapter |
-| `ClaudeCliCatalogModel` / `ClaudeCliConnectionOptions` | types |
-| `./invariant` | companion plugin registering package ownership |
+| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, per-request resolution, settings wiring |
+| [`src/adapter.ts`](src/adapter.ts) | The `ClaudeCliAdapter`: invocation building, subprocess execution, idle timeout |
+| [`src/serialize.ts`](src/serialize.ts) | Wire serialization: transcript roles, `--system-prompt` assembly, catalog types |
+| [`src/translate.ts`](src/translate.ts) | JSON result translation into harness `StreamChunk` values; fenced-JSON tool-call detection |
+| — | No runtime invariant companion is published; the adapter owns no independent event sequence or mutable data relation beyond contracts enforced at the LLM seam. |
 
-## See also
+</details>
 
-- `@deepseek-ai/dsh-llm` — provider-neutral LLM service interface
-- `@deepseek-ai/dsh-llm-deepseek` — sibling adapter for the DeepSeek API
-- `docs/architecture.md` — adapter registration lifecycle
-- `docs/cookbook/adding-a-package.md` — package layout rules this follows
+-----
 
+<a id="further-exploration"></a>
+## Further Exploration
+
+Read these pages when the package-level contract is not enough. They move from the service contract to the sibling adapter and the shared protocol.
+
+- [dsh-llm service](../llm/README.md) — the provider-neutral service this adapter registers on.
+- [llm-deepseek adapter](../llm-deepseek/README.md) — the API-key sibling serving the `deepseek-official` route.
+- [LLM streaming subsystem](../../../docs/subsystems/llm-streaming.md) — the `StreamChunk` protocol and adapter contract.
+
+-----
+
+<a id="model-experience"></a>
 ## Model Experience
 
 ### Claude Code CLI request
@@ -121,6 +169,10 @@ Retained response blocks re-enter later invocations through the rebuilt transcri
 
 ## Known Limitations and Deferred Work
 
+<a id="known-limitations-and-deferred-work"></a>
+
+These limits define where this V1 prototype stops. They are current package constraints, not a general Claude comparison or a task backlog.
+
 - **No streaming.** V1 reads the full JSON document and emits one text-delta. The wire protocol supports `stream-json`; V2 will use it.
 - **Tool-call detection is opportunistic.** The serializer tells Claude Code not to call tools (`--allowed-tools ""`, `--max-turns 1`) so the DSH tool loop stays the source of truth. Claude may still emit fenced JSON blocks like `{"tool":"name","arguments":{...}}`; the translator scans for those and surfaces them as `tool-call` blocks. False-positive risk: any fenced JSON in the response could match if its `tool` field happens to name a registered tool schema. V2 should switch to `--output-format stream-json` for structured events.
 - **System-prompt cap.** Claude Code silently truncates very long system prompts. The bridge caps explicitly at `maxSystemPromptChars` (default 32 000 chars) and logs a warning when it kicks in. Deployments with large `peck-docs` workspaces should grow the cap.
@@ -135,3 +187,13 @@ Deferred work:
 - Vision input via Anthropic-format image blocks.
 - A small `--bare`-mode sidecar that exposes Anthropic-format HTTP directly from Claude Code's internal session; this would replace the subprocess adapter entirely and unlock native tool-calls, vision, and prompt-cache reuse without the per-call rewrite.
 - Configurable retry policy on subprocess failures (e.g. transient ECONNRESET to OAuth endpoint).
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+None.
+
+</details>

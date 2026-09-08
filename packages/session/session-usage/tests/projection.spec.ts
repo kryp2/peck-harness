@@ -49,8 +49,9 @@ function message(session: Session, turn: number, step: number, usage?: unknown):
       content: [{ type: 'text', text: 'answer' }],
       source: { kind: 'model', provider: 'mock', model: 'mock' },
     }),
+    stream: [],
     ...(usage === undefined ? {} : { usage: usage as never }),
-  }, { surfaceOp: 'append', sourceEventSeqs: [] })
+  }, { surfaceOp: 'append' })
 }
 
 /** The empty projection value. */
@@ -211,6 +212,7 @@ describe('usageByRoute fold (controlled events)', () => {
         content: [{ type: 'text', text: 'answer' }],
         source: { kind: 'model', provider: 'mock', model: 'mock' },
       }),
+      stream: [],
       ...usage === undefined ? {} : { usage },
     })
 

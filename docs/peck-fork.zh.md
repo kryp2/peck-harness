@@ -6,7 +6,7 @@
 
 ## 基线与执行
 
-分歧相对一个固定的上游合并基线度量：`b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`。该 SHA 的唯一权威存放处是 [scripts/verify-peck-fork.ts](../scripts/verify-peck-fork.ts) 中的 `UPSTREAM_MERGE_BASE` 常量；本页重复它是为了评审便利。
+分歧相对一个固定的上游合并基线度量：`b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`。该 SHA 的唯一权威存放处是 [scripts/verify-peck-fork.ts](../scripts/verify-peck-fork.ts) 中的 `UPSTREAM_MERGE_BASE` 常量；本页重复它是为了评审便利。
 
 `pnpm run verify-peck-fork`（属于 `doc-sync`）只用本地 git 运行 `git diff --name-only <merge-base>...HEAD`，并要求返回的每一条路径都命中脚本中 `FORK_PATH_GROUPS` 清单里的某个模式。基线 SHA 在历史中缺失时按刷新指引报错；未匹配的路径会同时点名该路径与两处更新位置——脚本中的清单数组和下方的归属表。脚本是执行的权威；这里的表格是其经过评审的人工对应面，因此对分组的修改必须在同一次变更中同时落到两个文件。
 
@@ -27,7 +27,7 @@
 | fork CI 工作流调整 | peck | `.github/workflows/*.yml`、`.github/AGENTS.md`、`scripts/ci-workflow.spec.ts` | 待上游的触发预算与 runner 标签对本 fork 可用后回退 | `scripts/ci-workflow.spec.ts` |
 | fork 手册与状态文档 | peck | `IN_FLIGHT.md`、`PECK_DEPLOYMENT_TRAPS.md`、`PECK_HARNESS_BUILD_PLAN.md` | 发行计划完成、fork 运维与上游文档一致后删除 | Markdown 门禁（`verify-md-links`、`verify-md-wrap`） |
 | 仓库安全元数据 | peck | `.gitleaksignore` | 被标记的误报消失后删除对应条目 | gitleaks 扫描 |
-| 再生成的参考与成对译文 | upstream-shared | `THIRD_PARTY_NOTICES.md`、`docs/config-catalog.*`、`docs/event-producer-consumer.*`、`docs/persistence-catalog.*`、`docs/subsystems/extensions.*`、`docs/subsystems/user-questions.*`、`packages/core/scope/src/scoped-events.generated.ts` | 不单独退役；生成器随分歧源重新推导这些文件 | `doc-sync` 内的目录新鲜度门禁；依赖变更时 lefthook 再生成 notices |
+| 再生成的参考与成对译文 | upstream-shared | `THIRD_PARTY_NOTICES.md`、`docs/config-catalog.*`、`docs/event-producer-consumer.*`、`docs/persistence-catalog.*`、`docs/subsystems/extensions.*`、`docs/subsystems/user-questions.*`、`packages/core/scope/src/scoped-events.generated.ts`、`packages/extensions/cordis-client-runner/src/client/slot-catalog.ts`、`tsconfig.client.json` | 不单独退役；生成器随分歧源重新推导这些文件 | `doc-sync` 内的目录新鲜度门禁；依赖变更时 lefthook 再生成 notices |
 | peck 自有包 | peck | `packages/guard/deployment-refusal/**`、`packages/interaction/telegram-answerer/**`、`packages/llm/llm-claude-cli/**`、`packages/session/session-metered-receipt/**`、`packages/session/session-usage/**` | 若上游采纳则整包经 GitHub Discussions 上游化；否则作为 fork 永久载荷 | `pnpm run test` 下各包 vitest 套件；README 配对门禁 |
 | Peck 组合层（产品组合包、客户端品牌包、agent preset） | peck | `apps/cli/config/agent-presets/peck/**`、`packages/bundle/peck/**`、`packages/client/ui-brand-peck/**` | 整体为 peck 自有路径空间：产品组合集中于此，使通用 preset、bundle 与品牌包保持上游中性；仅当上游采纳「产品组合接缝」时才考虑上游化 | bundle 与客户端包 vitest 套件；`verify-cordis-config` 的平面分离与依赖检查 |
 | 上游共享包上的功能开发 | upstream-shared | `packages/core/agent/**`、`packages/core/session/src/known-event-types.ts`、`packages/client/ui-agent-preset/**`、`packages/extensions/cordis-host-runner/**`、`packages/extensions/tool-cordis/**`、`packages/host/apiproxy/**`、`packages/interaction/README.*`、`packages/interaction/tool-ask-user/**`、`packages/interaction/user-questions/**`、`packages/plan/plan-mode/tests/plan-mode.spec.ts`、`packages/session/README.*` | 通用改动经 GitHub Discussions 上游化，其余在每次同步时刻意重放 | 各包 vitest 套件；受影响的 `doc-sync` 门禁 |

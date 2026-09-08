@@ -4,11 +4,10 @@
  */
 
 import type { HeroBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import { PeckMark } from './mark.tsx'
 import { PeckWordmark } from './wordmark.tsx'
 
-type PeckBrandMarkProps = HeroBrandMarkOwnerProps & SidebarBrandMarkOwnerProps
+type PeckBrandMarkProps = HeroBrandMarkOwnerProps
 
 /**
  * Render the peck-bird mark with the presentation requested by its host surface.

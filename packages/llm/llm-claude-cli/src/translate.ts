@@ -14,7 +14,7 @@
  * @module dsh-llm-claude-cli/translate
  */
 
-import { CallId, type FinishReason, type StreamChunk, type TokenUsage, type ToolSchema } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, type FinishReason, type StreamChunk, type TokenUsage, type ToolSchema } from '@deepseek-ai/dsh-llm'
 
 /** Subset of the Claude-Code stdout payload the bridge reads. */
 export interface ClaudeStdout {
@@ -119,7 +119,7 @@ function finishChunk(reason: FinishReason, replayState?: unknown): StreamChunk {
 
 /** One detected tool call inside the assistant text. */
 interface DetectedToolCall {
-  id: CallId
+  id: ToolCallId
   name: string
   argumentsJson: string
 }
@@ -157,7 +157,7 @@ function detectToolCalls(text: string, tools: readonly ToolSchema[] | undefined)
     const args = obj.arguments
     const argsJson = args === undefined ? '{}' : JSON.stringify(args)
     counter++
-    matches.push({ id: CallId(`claude-cli-${counter}`), name, argumentsJson: argsJson })
+    matches.push({ id: ToolCallId(`claude-cli-${counter}`), name, argumentsJson: argsJson })
   }
   return matches
 }

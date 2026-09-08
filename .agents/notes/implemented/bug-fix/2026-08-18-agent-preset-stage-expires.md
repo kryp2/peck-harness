@@ -6,7 +6,7 @@ English | [中文](2026-08-18-agent-preset-stage-expires.zh.md)
 
 ## Problem
 
-The new-session chip stages a preset pick until a session becomes current and is still blank ([creator introduce cue](../feature/2026-08-10-creator-guidance-introduce-cue.md) rides the same stage). The stage had no deadline, and the seat applied it on EVERY session-list change. One session received five committed preset switches, four of them inside 28 milliseconds, each overwriting the one before; the last write won and the session ran a preset its user never settled on.
+The new-session chip stages a preset pick until a session becomes current and is still blank ([creator introduce cue](../../archived/feature/2026-08-10-creator-guidance-introduce-cue.md) rides the same stage). The stage had no deadline, and the seat applied it on EVERY session-list change. One session received five committed preset switches, four of them inside 28 milliseconds, each overwriting the one before; the last write won and the session ran a preset its user never settled on.
 
 The burst was stale stages spending themselves. A pick made where no session exists yet stays staged until some blank session arrives; a flow that never completed (an abandoned tab, a start that did not land) leaves that stage waiting indefinitely. Every tab folds every committed preset switch into its session list, and the fold mutates the list — so one tab's commit re-triggered every other tab's leftover stage against the same blank session, and each spent stage fired one more switch, overwriting the pick the user actually made. The seat also lacked a busy guard, so list churn while a select was in flight could mint a second call racing the first.
 

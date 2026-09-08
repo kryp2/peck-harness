@@ -19,7 +19,7 @@ const ROOT = resolve(import.meta.dirname, '..')
  * Upstream commit this fork's divergence is measured against. Refresh after
  * every upstream sync: `git fetch upstream && git merge-base upstream/master HEAD`.
  */
-export const UPSTREAM_MERGE_BASE = 'b150a551b8d465e31e418e1b2eaf5e79bbb7d28e'
+export const UPSTREAM_MERGE_BASE = 'b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed'
 
 /** Who owns a diverged path class and how an upstream sync treats it. */
 export type ForkPathOwner = 'peck' | 'upstream-shared'
@@ -84,6 +84,8 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'docs/subsystems/extensions.*',
       'docs/subsystems/user-questions.*',
       'packages/core/scope/src/scoped-events.generated.ts',
+      'packages/extensions/cordis-client-runner/src/client/slot-catalog.ts',
+      'tsconfig.client.json',
     ],
     retirement: 'Never retired separately: the generators re-derive these files from whatever the diverged sources contain.',
   },
