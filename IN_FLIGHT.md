@@ -1,17 +1,17 @@
 # IN_FLIGHT — deepseek-harness (Peck fork)
-_Sist oppdatert: 2026-08-24 (bølge 3 kjørt: #24 + #25 åpne [HOLD]-stakk, #86 åpen)_
+_Sist oppdatert: 2026-09-08 (kveld)_
 
 ## Sist gjort
-- 24.08: **Bølge 3**: **#24 [HOLD]** `deployment-refusal`-guard (`packages/guard/deployment-refusal`; eksplisitte fakta exposure/authKind + preset lest fra owning service; nekt ved remote+none+danger-full-access med tiltak i feilen; 21 tester inkl. real-Loader-composition, 100 % coverage, composed ingen steder). **#25 [HOLD-stakk på #24]** Peck composition layer: `peck`-preset + `packages/bundle/peck` + `ui-brand-peck` (brand slots fylles ubetinget, palette som overrideTokens-lag); generiske flater (system-prompt, cordis-preset, primitives, theme, web-app, ui-brand-official) restaurert BYTE-EKSAKT mot upstream merge-base `b150a551b8d4` — fremtidige syncs konfliktfrie. doc-sync 29/29, typecheck ren, test:web:built 281 grønn under official artifacts.
-- 24.08: **Alle fire beslutningene tatt av Thomas**: true racing (02), egen VM+gVisor/Docker (03), dispatch-only ci-master (04), receipt-spesifikasjon green-lightet (01).
-- 24.08: **Bølge 1–2 landet** (#18–#23): inbox-typing, claude-cli + metered-receipt 100 % coverage, fork-divergence-gate (`verify-peck-fork`, nå 204 stier/11 grupper), ci-meta-align, TRUE RACING for user-questions. Receipt-trust-spesifikasjon = **[HOLD] PR #86** i peck-overlay-schema (worktree `peck-overlay-schema-spec`, main-checkout urørt): 14 seksjoner, 25 kryssverifiserte vektorer Python↔@bsv/sdk 24/24; @bsv/sdk dobbel-hash-felle dokumentert i §6.
+- 08.09 kveld: **PR #30 CI nede fra 3 røde lanes til 2**. Fant og fikset en selvpåført regresjon fra ettermiddagen: `9ea8650b` la `fetch-depth: 0` på ALLE checkouts, men `scripts/ci-compatible-selfhosted.spec.ts:95` asserter node-compat sine egne checkout-opsjoner — meta-testen falt derfor i begge coverage-lanes. `66e445cb` skoper full historie til de to lanes som faktisk kjører fork-divergence-gaten (node-24 static + windows-observational). Resultat på `66e445cb`: static, benchmarks, node 22.19/24.9/26, alle windows-lanes og hele python-matrisen GRØNNE.
+- 08.09: lockfile (pinned pnpm 11 + overrides), lisens-gate (public MIT på refusal + metered-receipt), versjoner 0.1.3-alpha.2, brand-sletting, inventory 214/12, invariant-migrasjon.
 
 ## Neste
-- **Thomas' samlede runde** — se gjennom og merge i rekkefølge **#24 → #25** ([HOLD]: deployment-atferd), og **#86** (= protokollgodkjenning). Deretter: verifyReceipt()-briefe (TS/Go/Python), task 15 keyless canary, task 05 HMR-diagnose.
-- **Én beslutning gjenstår fra bølge 3**: infra-repo-hjem for task 14 (anbefaling: nytt `peck-infra`); revidert brief ligger i peck-to/reports/TASKS_2026_08_24/14-hosted-sandbox-hardening.md.
-- Etter #25-merge: bygg med peck-bundle aktiv — verifiseringsparet er `DSH_BUILD_CLIENT_PROFILE=official pnpm run build` → `test:web:built` (se bundle README Known Limitations).
+- **Thomas' avgjørelse på 2 gjenstående lanes** (ingen er fork-eid kode — alt er upstream-kode som feiler i vårt runner-miljø):
+  1. `node 24 / coverage`: 17 feil i 6 filer, alle i samme rot — `linux-scope.ts:380` «subprocess scope exited before its bootstrap consumed the launch request». Reproduserer lokalt på syncen, GRØNT på pre-sync-treet (peck-harness-metadata). Upstream-kode urørt av forken.
+  2. `node 24 / snapshots and artifacts`: 5 e2e-feil (30s loader-smoke-timeout + en 3-vs-2 request-telling). Alle 5 PASSERER lokalt — ren runner-treghet.
+  Valg: (a) merge med de to som kjent-røde og åpne oppfølgingsissue, (b) hev loader-smoke-timeout for snapshots og lever linux-scope som upstream-rapport, (c) grav videre i linux-scope først.
+- Etter merge: #29 rebase (benchmark), session-header/per-model-API fra go-session-worktree, grader-timeout, 38-filers doc-rebase — hver som egen PR.
 
 ## Blokkert / venter på
-- **Prod-peck-stacken kjører på b550 siden 24.08** (P15 beholder dev-harnessen foreløpig). Når harnessen flyttes dit: land #24+#25 og task 16 (immutable deploy-manifest) FØRST — b550 må ikke eksponeres uten app-auth.
-- Upstream er pull-only speiling; sync = fetch upstream + merge inn i kryp2/peck-harness. Etter hver sync: refresh `UPSTREAM_MERGE_BASE` i scripts/verify-peck-fork.ts og re-klassifiser nye stier (gate feiler ellers med refresh-instruks).
-- pnpm A3: bruk alltid `npx -y pnpm@11.7.0`; node_modules reinstallert på 11.7.0 (purge godkjent av Thomas 22.08).
+- Upstream er pull-only; syncen ligger 457 commits bak `upstream/master` (merge-base `b0a7d2ce3b4c`). Etter hver sync: refresh `UPSTREAM_MERGE_BASE` i scripts/verify-peck-fork.ts.
+- pnpm A3: bruk alltid `npx -y pnpm@11.7.0`.
