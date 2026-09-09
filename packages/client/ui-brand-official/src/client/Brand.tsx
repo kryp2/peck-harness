@@ -1,16 +1,13 @@
-import { BrandWordmark, PeckLogo } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { HeroBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { BrandWordmark, FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
-
-type OfficialBrandMarkProps = HeroBrandMarkOwnerProps & SidebarBrandMarkOwnerProps
 
 /**
  * Render the official mark with the presentation requested by its host surface.
  * @param props - Host-supplied mark presentation.
- * @returns the peck-bird mark.
+ * @returns the official whale mark.
  */
-export function OfficialBrandMark({ size, className }: OfficialBrandMarkProps) {
-  return <PeckLogo size={size} className={className} />
+export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
+  return <FishLogo size={size} />
 }
 
 /**

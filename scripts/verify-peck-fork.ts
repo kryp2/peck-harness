@@ -19,7 +19,7 @@ const ROOT = resolve(import.meta.dirname, '..')
  * Upstream commit this fork's divergence is measured against. Refresh after
  * every upstream sync: `git fetch upstream && git merge-base upstream/master HEAD`.
  */
-export const UPSTREAM_MERGE_BASE = 'b150a551b8d465e31e418e1b2eaf5e79bbb7d28e'
+export const UPSTREAM_MERGE_BASE = 'b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed'
 
 /** Who owns a diverged path class and how an upstream sync treats it. */
 export type ForkPathOwner = 'peck' | 'upstream-shared'
@@ -55,7 +55,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     id: 'fork-ci',
     title: 'Fork CI workflow adjustments',
     owner: 'peck',
-    patterns: ['.github/workflows/*.yml', '.github/AGENTS.md', 'scripts/ci-workflow.spec.ts'],
+    patterns: ['.github/workflows/*.yml', '.github/AGENTS.md', 'scripts/ci-workflow.spec.ts', 'scripts/tests/ci-master-platforms.spec.ts', 'scripts/tests/ci-release-selfhosted.spec.ts'],
     retirement: 'Reverts toward the upstream workflows once their trigger budgets and runner labels work for the fork.',
   },
   {
@@ -92,6 +92,8 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'docs/subsystems/extensions.*',
       'docs/subsystems/user-questions.*',
       'packages/core/scope/src/scoped-events.generated.ts',
+      'packages/extensions/cordis-client-runner/src/client/slot-catalog.ts',
+      'tsconfig.client.json',
     ],
     retirement: 'Never retired separately: the generators re-derive these files from whatever the diverged sources contain.',
   },
@@ -100,6 +102,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Peck-owned packages',
     owner: 'peck',
     patterns: [
+      'packages/guard/deployment-refusal/**',
       'packages/interaction/telegram-answerer/**',
       'packages/llm/llm-claude-cli/**',
       'packages/session/session-metered-receipt/**',
@@ -108,11 +111,24 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     retirement: 'Offered upstream as whole packages through GitHub Discussions if upstream adopts the capability; otherwise permanent fork payload.',
   },
   {
+    id: 'peck-composition',
+    title: 'Peck composition layer (product bundle, removed brand package, agent preset)',
+    owner: 'peck',
+    patterns: [
+      'apps/cli/config/agent-presets/peck/**',
+      'packages/bundle/peck/**',
+      'packages/client/ui-brand-peck/**',
+    ],
+    retirement: 'Wholly peck-owned path space: the product composition lives here so the generic presets, bundles, and brand packages stay upstream-neutral. Offered upstream only if upstream adopts a product-composition seam.',
+  },
+  {
     id: 'shared-runtime-features',
     title: 'Feature work on upstream-shared packages',
     owner: 'upstream-shared',
     patterns: [
       'packages/core/agent/**',
+      'packages/core/agent-loop/src/inbox.ts',
+      'packages/core/agent-loop/tests/inbox.spec.ts',
       'packages/core/session/src/known-event-types.ts',
       'packages/client/ui-agent-preset/**',
       'packages/extensions/cordis-host-runner/**',
@@ -122,6 +138,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'packages/interaction/tool-ask-user/**',
       'packages/interaction/user-questions/**',
       'packages/plan/plan-mode/tests/plan-mode.spec.ts',
+      'packages/preset/agent-presets/src/display.ts',
       'packages/session/README.*',
     ],
     retirement: 'Each change either lands upstream through GitHub Discussions when generic, or is deliberately re-applied across every upstream sync.',
@@ -144,7 +161,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'scripts/client-build-environment.client.spec.ts',
       'scripts/client-build-environment.ts',
     ],
-    retirement: 'Never upstreamed; re-applied across every sync while the product runs under the Peck name.',
+    retirement: 'Generic persona and visual-identity surfaces stay upstream-neutral; Peck branding composes only in the peck-composition group. Each listed path retires once its content matches upstream again, and the next merge-base refresh drops the emptied group.',
   },
   {
     id: 'workspace-registration',

@@ -3,7 +3,8 @@ import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import {
-  IconApiOutline14, IconArchiveOutline20, IconFolderClose16, IconGoalOutline16, IconSendOutline16,
+  IconAlarmClockOutline16, IconApiOutline14, IconArchiveOutline20, IconFolderClose16,
+  IconGoalOutline16, IconSendOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 
 afterEach(cleanup)
@@ -16,8 +17,8 @@ const icons = Object.fromEntries(
 const iconNames = Object.keys(icons)
 
 describe('ic_ds_ icon set', () => {
-  it('exports the full icon set (46 deepsuite + 20 figma extracts + four product glyphs outside those sets)', () => {
-    expect(iconNames.length).toBe(70)
+  it('exports the full icon set (46 deepsuite + 21 figma extracts + seven product glyphs outside those sets)', () => {
+    expect(iconNames.length).toBe(74)
   })
 
   it.each(iconNames)('%s renders an svg with currentColor fills and no hardcoded palette', (name) => {
@@ -45,6 +46,8 @@ describe('ic_ds_ icon set', () => {
     expect(folder.container.querySelector('svg')!.getAttribute('width')).toBe('16')
     const archive = render(<IconArchiveOutline20 />)
     expect(archive.container.querySelector('svg')!.getAttribute('width')).toBe('20')
+    const alarm = render(<IconAlarmClockOutline16 />)
+    expect(alarm.container.querySelector('svg')!.getAttribute('width')).toBe('16')
   })
 
   it('renders reusable goal glyphs without document-global ids', () => {
@@ -67,53 +70,15 @@ describe('FishLogo', () => {
   })
 })
 
-describe('PeckLogo', () => {
-  it('renders the square bird mark in currentColor with no hardcoded palette', () => {
-    const { container } = render(<primitives.PeckLogo />)
-    const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('24')
-    expect(svg.getAttribute('height')).toBe('24')
-    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24')
-    expect(container.querySelectorAll('circle')).toHaveLength(2)
-    expect(container.querySelectorAll('path')).toHaveLength(9)
-    expect(container.innerHTML).toContain('currentColor')
-    expect(container.innerHTML).not.toMatch(/#[0-9a-fA-F]{3,8}"/)
-  })
-
-  it('accepts an explicit size and layout class', () => {
-    const { container } = render(<primitives.PeckLogo size={34} className="hero-mark" />)
-    const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('34')
-    expect(svg.getAttribute('height')).toBe('34')
-    expect(svg.getAttribute('class')).toBe('hero-mark')
-  })
-})
-
 describe('BrandWordmark', () => {
-  it('renders bird plus literal wordmark at the default size', () => {
-    const { container } = render(<primitives.BrandWordmark />)
-    const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe(`${(24 * 160) / 24}`)
-    expect(svg.getAttribute('viewBox')).toBe('0 0 160 24')
-    expect(container.querySelectorAll('circle')).toHaveLength(2)
-    expect(container.querySelector('text')?.textContent).toBe('Peck Harness')
-    expect(svg.getAttribute('fill')).toBe('none')
-  })
+  it('can render the name artwork with or without its leading mark', () => {
+    const view = render(<primitives.BrandWordmark />)
+    const svg = view.container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe('182')
+    expect(svg.getAttribute('viewBox')).toBe('0 0 182 24')
 
-  it('omits the leading mark and shifts the viewBox when includeMark is false', () => {
-    const { container } = render(<primitives.BrandWordmark includeMark={false} />)
-    const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe(`${(24 * 136) / 24}`)
-    expect(svg.getAttribute('viewBox')).toBe('24 0 136 24')
-    expect(container.querySelectorAll('circle')).toHaveLength(0)
-    expect(container.querySelector('text')?.textContent).toBe('Peck Harness')
-  })
-
-  it('scales a custom size through the fixed ratio with an optional class', () => {
-    const { container } = render(<primitives.BrandWordmark size={32} className="boot-wordmark" />)
-    const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe(`${(32 * 160) / 24}`)
-    expect(svg.getAttribute('height')).toBe('32')
-    expect(svg.getAttribute('class')).toBe('boot-wordmark')
+    view.rerender(<primitives.BrandWordmark includeMark={false} />)
+    expect(svg.getAttribute('width')).toBe('156')
+    expect(svg.getAttribute('viewBox')).toBe('26 0 156 24')
   })
 })

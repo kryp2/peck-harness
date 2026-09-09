@@ -11,14 +11,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
-import { SettingsProvider, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import { resolveAdapterOptions } from '../src/index.ts'
 import * as ClaudeCli from '../src/index.ts'
 import type { Config } from '../src/index.ts'
 
 /** Mirrors the plugin's own settings namespace; not exported by the entry. */
-const NS: SettingsNamespace = settingsNamespace('llm-claude-cli')
+const NS = 'llm-claude-cli' as SettingsNamespace
 
 /** The smallest real provider: one in-memory document, always writable. */
 class MemorySettings extends SettingsProvider {

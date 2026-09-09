@@ -83,8 +83,9 @@ describe('real Loader composition', () => {
         content: [{ type: 'text', text: 'hi' }],
         source: { kind: 'model', provider: 'openrouter', model: 'glm-5.2' },
       }),
+      stream: [],
       usage: { inputTokens: 10, outputTokens: 5 },
-    }, { surfaceOp: 'append', sourceEventSeqs: [] })
+    }, { surfaceOp: 'append' })
     expect(loaded.sessionProjections.snapshot(session).values.usageByRoute)
       .toMatchObject({
         totalCalls: 1,

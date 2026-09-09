@@ -1,25 +1,43 @@
+---
+description: "问答服务，用于工具、权限插件、本地 answerer 与 Agent-scoped Web 交互。"
+kind: "package-reference"
+---
+
 # @deepseek-ai/dsh-user-questions
 
 [English](README.md) | 中文
 
-用户交互 Service Definition。它定义 `ctx.userQuestions`，供面向模型的工具或权限插件在需要暂停工作并询问人类决定时使用。
+## 概述
 
+用户交互 Service Definition。它定义 `ctx.userQuestions`，供面向模型的工具或权限插件在需要暂停工作并询问人类决定时使用。当消费方必须暂停操作并等待用户回答时，请使用它。
+
+## 目录
+
+- [服务：`UserQuestionService`（ctx 键：`userQuestions`）](#service-userquestionservice-ctx-key-userquestions)
+- [职责](#role)
+- [模型体验](#model-experience)
+- [已知限制与暂缓事项](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
+
+-----
+
+<a id="service-userquestionservice-ctx-key-userquestions"></a>
 ## 服务：`UserQuestionService`（ctx 键：`userQuestions`）
 
 ### 公开 API
 
-- `ctx.userQuestions.ask(request): Promise<AskUserQuestionAnswer>` 同时询问所有已组合的回答方，并以第一个认领的回答结算。
+- `ctx.userQuestions.ask(request): Promise<AskUserQuestionAnswer>` 派发带 scope 的回答者 waterfall，并与所有已组合的竞速回答方竞速；以第一个认领的回答结算。
 - `ctx.userQuestions.registerProvider(provider): () => void` 遗留垫层：把 provider 注册为一个 `'user-questions/ask'` 监听器。新的回答方应直接在事件上注册（`ctx.on('user-questions/ask', ...)`）。
+- `raceUserQuestionAttempts(attempts, request, callerSignal?): Promise<AskUserQuestionAnswer>` `ask()` 使用的竞速引擎：并发调用所有尝试并恰好结算一次。
 
-### 多通道竞速
+### 回答方组合
 
-回答方组合在 `'user-questions/ask'` 事件上；`ask()` 用同一个请求和同一个竞速信号并发调用它们（真竞速——注册顺序不起作用）：
+回答方通过两条通道抵达同一个提问：
 
-- 以一个回答 resolve 表示**认领**该问题。第一个结算恰好获胜一次。
-- 以 `undefined` resolve 表示**婉拒**——该通道无法或不愿回答（未配置、传输失败、已被取代），提问对其他尝试保持开放。
-- 仅在报告**权威失败**时 reject，且必须使用本 seam 的错误分类（`UserQuestionError`）。这会让整个提问对所有通道结算：使用这套词汇的通道是在断言终态，例如 Web GUI 的"用户已取消"——它必须抵达调用方，而不能落到较慢的通道。任何其他拒绝都被视为通道失败（等同于婉拒）。
+- 带 scope 的 waterfall `'user-questions/request'`。随产品交付的 Web 回答者通过 Remote Events 在此组合（带 Agent scope）；本地未限定 scope 的 waterfall listener 服务不含 agent 的程序化请求。没有竞速回答方组合时，`ask()` 直接运行该 waterfall，保留其精确契约：传输错误的还原与飞行中中止的归一化。
+- 竞速事件 `'user-questions/ask'`。所有已组合的回答方用同一个请求同时被调用（真竞速——注册顺序不起作用）：以一个回答 resolve 表示**认领**该问题；以 `undefined` resolve 表示**婉拒**——该通道无法或不愿回答（未配置、传输失败、已被取代），提问对其他尝试保持开放；仅在报告**权威失败**时 reject，且必须使用本 seam 的错误分类（`UserQuestionError`），它会让整个提问对所有通道结算。存在竞速回答方时，waterfall 作为其中一个尝试与它们竞速并观察竞速信号，因此别处获胜时它挂起的问题也会被撤回。
 
-没有尝试被组合、或所有尝试都婉拒或以通道失败告终时，`ask()` 会以 `NO_ANSWERER` 拒绝（fail closed）。落败的尝试会观察到自己的竞速信号被中止，其 `reason` 是说明原因的 `UserQuestionError`：另一个回答方先认领时为 `SUPERSEDED`；回合取消后为调用方自己的 `ASK_ABORTED` 错误。提问结算之后再到来的迟到结算会被幂等地丢弃。
+Fail closed：没有回答方被组合、或所有尝试都婉拒或以通道失败告终时，`ask()` 会以 `NO_ANSWERER` 拒绝。落败的尝试会观察到自己的竞速信号被中止，其 `reason` 是说明原因的 `UserQuestionError`：另一个回答方先认领时为 `SUPERSEDED`；回合取消后为调用方自己的 `ASK_ABORTED` 错误。提问结算之后再到来的迟到结算会被幂等地丢弃。
 
 ### 关键类型
 
@@ -29,20 +47,22 @@
 - `AskUserQuestionAnswer`：`{ answers: [{ id, selected, custom? }] }`。
 - `UserQuestionProvider`：包含 `ask(request)` 的 UI 实现。
 - `UserQuestionAttempt`：一个竞速监听器：`(request, signal) => Promise<AskUserQuestionAnswer | undefined>`，遵循上述认领/婉拒/权威失败契约。
-- `UserQuestionError`：`HarnessError` 的子类，包含 `EMPTY_QUESTIONS`、`BAD_INTENT`、`NO_ANSWERER`、`ASK_ABORTED`、`ASK_CANCELLED`、`ASK_MISSING_AGENT`、`SUPERSEDED`、`CALLER_NOT_LIVE` 和 `DELEGATED_CALLER` 等代码。
+- `UserQuestionError`：`HarnessError` 的子类，包含 `EMPTY_QUESTIONS`、`BAD_INTENT`、`NO_ANSWERER`、`ASK_ABORTED`、`ASK_CANCELLED`、`SUPERSEDED`、`CALLER_NOT_LIVE` 和 `DELEGATED_CALLER` 等代码。
 
 对于单选题，`custom` 会覆盖选中的选项，且 `selected` 为空。对于多选题，`custom` 可以补充 `selected` 中的标签。UI 可以把跳过的条目保留为 `{ id, selected: [] }`，既维持现有回答形态，也保留该批次中的其他回答。
 
-请求包含 agent 时，`ask()` 会通过当前 `AgentRegistry` 验证该 agent 与注册表中的存活实例是同一对象，并且只允许运行时根调用。持久谱系不构成权限依据：带有历史委托深度的会话恢复为新的运行时根后可以提问；归属于另一个 agent 的存活子级即使持久化记录的委托深度为零也会被拒绝。不含 agent 的程序化请求沿用同一竞速路径，只是没有按 agent 的过滤。
+请求包含 agent 时，`ask()` 会通过当前 `AgentRegistry` 验证该 agent 与注册表中的存活实例是同一对象，并且只允许运行时根调用。持久谱系不构成权限依据：带有历史委托深度的会话恢复为新的运行时根后可以提问；归属于另一个 agent 的存活子级即使持久化记录的委托深度为零也会被拒绝。Web 回答者只接收带 Agent scope 的请求；不含 agent 的程序化请求仍可由本地未限定 scope 的 waterfall listener 处理。
 
 ### 呈现意图
 
 `intent` 声明某个问题本身就是一种已知决策，因此认识该标签的 UI 可以照此呈现——`plan-review` 表示 `detail` 是一份待审阅的计划，`dsh-plan-mode` 会在 `exit_plan_mode` 的问题上设置它。意图只改变呈现：遵循它的 UI 回答的仍是通用 UI 会发送的那些选项标签，不认识该标签的 UI 渲染通用选项列表，因此调用方两种情况下读到的回答字段相同。`approve` 指名表示批准的标签，而不依赖选项顺序。有两项断言无法通过类型表达，`ask()` 会以 `BAD_INTENT` 拒绝它们：`approve` 未命中该问题自身的任一选项，以及意图落在没有 `detail` 的问题上——而 `detail` 正是它自称在审阅的东西。
 
+<a id="role"></a>
 ## 职责
 
-这是 Service Definition 包。`@deepseek-ai/dsh-tool-ask-user` 等 Consumer 依赖此服务；Web 宿主运行时提供随产品交付的 Web GUI 回答方，而 `@deepseek-ai/dsh-telegram-answerer` 等可选通道与它并列组合。循环保持不变：工具调用等待 Promise，工具结果随后恢复正常的 agent loop（智能体循环）。
+这是 Service Definition 包。`@deepseek-ai/dsh-tool-ask-user` 等 Consumer 依赖此服务；Web Client 通过 Remote Events 贡献带 Agent scope 的回答者，而 `@deepseek-ai/dsh-telegram-answerer` 等可选通道在竞速事件上并列组合。循环保持不变：工具调用等待结算后的回答，该结果随后恢复正常的 agent loop（智能体循环）。
 
+<a id="model-experience"></a>
 ## 模型体验
 
 间接地，通过 `dsh-tool-ask-user`：它会将成功的回答保留为紧凑 JSON，或返回以下失败之一：`Error: ask_user_question was aborted before the user answered`、`Error: ask_user_question requires at least one question`、`Error: human interaction requires the exact live calling agent when an agent is supplied`、`Error: human interaction is unavailable while the calling agent is owned by another live agent; include the unresolved question or decision in the child agent's final result`、`Error: no user-questions answerer is composed` 或 `Error: <message>`。等待人类回答不会增加 token。
@@ -53,5 +73,21 @@
 
 ## 已知限制与暂缓事项
 
+<a id="known-limitations-and-deferred-work"></a>
+
 - **婉拒不携带细节**：通道内部失败时以 `undefined` 婉拒，其诊断信息不会抵达调用方；调用方只能看到聚合后的 `NO_ANSWERER`（或某个权威的分类错误）。
+- **带 Agent scope 的 Web 回答**：Remote Events 仅在请求带有存活 Agent scope 时路由随产品交付的 Web 回答者；agentless 调用方需要本地未限定 scope 的 waterfall listener。
 - **词汇仅包含问题表单形态**：可供选择的选项加可选的自定义文本；更丰富的交互形态（文件选择器、diff 预览确认）尚无 seam 词汇。
+
+
+<a id="dev-note"></a>
+### 开发备注
+
+<details>
+<summary>维护者工作上下文——点击展开</summary>
+
+无。
+
+</details>
+
+**运行时不变式：** 不发布伴生入口。回答方尝试通过总线按提问结算，ask 结果直接返回调用方；该 seam 不发布独立 request/answer 审计流。

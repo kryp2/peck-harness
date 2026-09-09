@@ -591,8 +591,10 @@ describe('telegram-answerer under racing', () => {
 
     claim()
     await expect(asked).resolves.toEqual({ answers: [{ id: 'q', selected: ['Web'] }] })
-    // Let the killed-curl continuation and loser cleanup run to completion.
-    await new Promise(resolve => setTimeout(resolve, 0))
+    // Let the killed-curl continuation and loser cleanup run to completion: the
+    // edit's shell run resolves a macrotask after the SUPERSEDED abort lands,
+    // so yield the timer queue, not just the microtask queue.
+    await new Promise(resolve => setTimeout(resolve, 50))
 
     // The long-poll stopped promptly (exactly one poll), and the posted message
     // was edited best-effort through the same env-carried-URL pattern.

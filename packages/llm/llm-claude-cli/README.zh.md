@@ -1,32 +1,39 @@
+---
+description: "harness LLM 服务的 claude --print 子进程适配器：通过本地 Claude Code CLI（OAuth）运行 Claude 模型，面向选择无密钥 Claude 路线的用户与维护者。"
+kind: "package-reference"
+---
+
 # @deepseek-ai/dsh-llm-claude-cli
 
 [English](README.md) | 中文
 
-> 状态：**V1 原型。** 已针对 Claude Code 2.1.x 测试。在用于生产工作之前，请先阅读 [已知限制与延期工作](#known-limitations-and-deferred-work)。
+> 状态：**V1 原型。** 已针对 Claude Code 2.1.x 测试。生产采用前请先阅读[已知限制与延期工作](#known-limitations-and-deferred-work)。
 
-面向 DeepSeek Harness LLM 接缝的 `claude --print --output-format json` 适配器。让 DSH agent 无需 `ANTHROPIC_API_KEY` 即可运行 Claude 模型——方式是调用本地安装的 Claude Code CLI。身份验证走宿主机自己的 Claude 订阅（Pro/Max OAuth）——harness 本身不持有任何 Anthropic 凭证。
+## 概述
 
-## 模型目录
+`@deepseek-ai/dsh-llm-claude-cli` 是 harness LLM 服务的 Claude 适配器：它拥有 `claude-cli` provider 路由，把每次请求翻译成一次 `claude --print --output-format json` 子进程调用，再转成 harness stream-chunk 协议。有了它，DSH agent 无需 `ANTHROPIC_API_KEY` 即可运行在 Claude 模型上，因为身份验证走宿主机自己的 Claude 订阅（Pro/Max OAuth）——harness 不携带任何 Anthropic 凭据。它是 `@deepseek-ai/dsh-llm-deepseek` 的无密钥姊妹包：部署已为 Claude Code 付费时选这条路线，持有 DeepSeek key 时选 DeepSeek 的 API 适配器。
 
-| 线上别名 | 底层模型（Claude Code 2.1.x） | 备注 |
-|---|---|---|
-| `sonnet` | Claude Sonnet 4.5 | 默认；通过 `--settings` 模型固定匹配 |
-| `haiku` | Claude Haiku 4.5 | 面向成本敏感 loop 的低价档 |
-| `opus` | Claude Opus 4.x | 受订阅档位限制；可能不可用 |
+## 目录
 
-桥接不会直接看到底层模型 id；它把 Claude Code 的 `modelUsage` payload 记入 session log 供诊断使用。
+- [使用本包](#use-this-package)
+- [理解实现](#understand-the-implementation)
+- [进一步探索](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
-## 为什么存在这个包
+-----
 
-`@deepseek-ai/dsh-llm-deepseek` 说的是 DeepSeek chat-completions API。这个包是它的姊妹包，面向首选模型是 Claude、并且已经为 Claude Code 付费的用户。该桥接把 `GenerateOptions` 折叠成一次 `claude --print` 调用，再把产生的 JSON 文档解析回 harness 的 `StreamChunk`。
+<a id="use-this-package"></a>
+## 使用本包
 
-## 安装
+当组合通过本地安装的 Claude Code CLI 运行 Claude 模型时挂载本插件。它注册唯一的 `claude-cli` 路由，并按请求解析连接事实，因此一个组合条目加可选的用户 settings 区块即可驱动整个适配器。
 
-```sh
-pnpm install
-```
+### 何时选用
 
-加入你的 `cordis.yml`：
+当部署的首选模型是 Claude、且宿主机已为 Claude Code 付费时选用本适配器——全链路不配置任何 API key，OAuth 通过 Claude Code 自己的 `/login` 流程解决，归用户负责。当部署持有 DeepSeek API key 时选用 `dsh-llm-deepseek`。为 `claude-cli` 注册任何其他适配器都会以 `DUPLICATE_ADAPTER` 失败。
+
+### 最小配置
 
 ```yaml
 - id: llm-claude-cli
@@ -42,9 +49,29 @@ pnpm install
       - id: opus
 ```
 
-该插件注册一条 provider 路由：`claude-cli`。把 DSH 的 `GenerateOptions` 指向它——`provider: "claude-cli"` 加任意已配置的模型别名。
+插件注册一条 provider 路由：`claude-cli`。把 DSH `GenerateOptions` 以 `provider: "claude-cli"` 指向它，并使用任一已配置的模型别名。
 
-## 线上协议
+| 字段 | 默认值 | 含义 |
+|---|---|---|
+| `binary` | `claude` | 二进制路径；必须在 `$PATH` 上可解析 |
+| `settingsJson` | sonnet + medium effort | 原样传给 `--settings` 的 JSON 字符串 |
+| `maxTokens` | `32000` | 每次请求的默认输出上限 |
+| `maxSystemPromptChars` | `32000` | `--system-prompt` 长度软上限，超限警告并截断 |
+| `models` | sonnet + haiku + opus | 发现通道展示的参考目录 |
+
+生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-llm-claude-cli)是全部可接受字段及其 JSDoc 的权威来源。
+
+### 模型目录
+
+| 线上别名 | 底层模型（Claude Code 2.1.x） | 备注 |
+|---|---|---|
+| `sonnet` | Claude Sonnet 4.5 | 默认；由 `--settings` 模型固定匹配 |
+| `haiku` | Claude Haiku 4.5 | 便宜档，适合成本敏感的循环 |
+| `opus` | Claude Opus 4.x | 受订阅档位限制；可能不可用 |
+
+桥接看不到底层模型 id；它把 Claude Code 的 `modelUsage` 载荷记入 session log 供诊断。
+
+### 线上协议
 
 ```
 GenerateOptions
@@ -70,26 +97,47 @@ StreamChunk[]   { block-start, text-delta, block-end, usage, finish }
 
 `--max-tokens` 有意不转发。Claude Code CLI 2.1.x 会把它当作未知选项拒绝；需要硬输出上限的部署应在 `--settings` 中固定模型，或依赖 Claude Code 自己的 `max_tokens` 策略。
 
-## 公共 API
+-----
 
-| 导出 | 备注 |
+<a id="understand-the-implementation"></a>
+## 理解实现
+
+<details>
+<summary>实现内部细节 — 点击展开</summary>
+
+本节解释适配器背后的请求/响应翻译；可观察行为已在[使用本包](#use-this-package)中完整覆盖。
+
+### 设计概念
+
+桥接把 `GenerateOptions` 收敛为一次 `claude --print` 调用，再把返回的 JSON 文档解析回 harness `StreamChunk`。`resolveAdapterOptions()` 是从原始配置到已验证连接事实的唯一显式 resolve 步骤，适配器通过 `llm-claude-cli` settings 区块按请求重读这些事实，因此编辑用户 settings 文档无需重启即可影响下一次请求。
+
+### 源码地图
+
+| 文件 | 职责 |
 |---|---|
-| `ClaudeCliAdapter` | extends `LlmAdapter`；每次插件挂载一个实例 |
-| `Config` | schemastery schema；兼作 settings 区块形状 |
-| `apply` | Cordis function plugin 入口；`inject: ['llm']` |
-| `resolveAdapterOptions(config)` | 显式 resolve 步骤，fail-loud |
-| `DEFAULT_CONTEXT_WINDOW` / `DEFAULT_MAX_TOKENS` / `DEFAULT_STREAM_IDLE_TIMEOUT_MS` | 与 adapter 共享 |
-| `ClaudeCliCatalogModel` / `ClaudeCliConnectionOptions` | 类型 |
-| `./invariant` | 注册包所有权的伴随插件 |
+| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、按请求解析、settings 接线 |
+| [`src/adapter.ts`](src/adapter.ts) | `ClaudeCliAdapter`：调用构造、子进程执行、空闲超时 |
+| [`src/serialize.ts`](src/serialize.ts) | 线上序列化：transcript 角色、`--system-prompt` 组装、目录类型 |
+| [`src/translate.ts`](src/translate.ts) | JSON result 翻译为 harness `StreamChunk` 值；围栏 JSON 工具调用检测 |
+| — | 不发布运行时不变量伴随件；除 LLM 缝线处强制的契约外，适配器不拥有独立的事件序列或可变数据关系。 |
 
-## 另见
+</details>
 
-- `@deepseek-ai/dsh-llm` — provider 中立的 LLM 服务接口
-- `@deepseek-ai/dsh-llm-deepseek` — DeepSeek API 的姊妹适配器
-- `docs/architecture.md` — 适配器注册生命周期
-- `docs/cookbook/adding-a-package.md` — 本包遵循的包布局规则
+-----
 
-## Model Experience
+<a id="further-exploration"></a>
+## 进一步探索
+
+当包级契约不够用时阅读这些页面。它们从服务契约走向姊妹适配器与共享协议。
+
+- [dsh-llm 服务](../llm/README.zh.md) —— 本适配器注册其上的 provider 中立服务。
+- [llm-deepseek 适配器](../llm-deepseek/README.zh.md) —— 服务 `deepseek-official` 路由的 API-key 姊妹包。
+- [LLM 流式子系统](../../../docs/subsystems/llm-streaming.zh.md) —— `StreamChunk` 协议与适配器契约。
+
+-----
+
+<a id="model-experience"></a>
+## 模型体验
 
 ### Claude Code CLI 请求
 
@@ -119,7 +167,11 @@ JSON result 文档中的 `result` 文本成为 harness 分片；检测到的围�
 
 保留的响应分片通过重建的 transcript 进入后续调用，并只在 Claude Code 自身缓存保留它们的范围内复用；每次调用仍支付一次缓存重写。
 
-## Known Limitations and Deferred Work
+## 已知限制与延期工作
+
+<a id="known-limitations-and-deferred-work"></a>
+
+这些限制说明本 V1 原型的边界。它们是当前包约束，不是通用 Claude 对比，也不是任务积压。
 
 - **无流式输出。** V1 读取完整 JSON 文档并发出一个 text-delta。线上协议支持 `stream-json`；V2 将启用它。
 - **工具调用检测是机会主义的。** 序列化器告诉 Claude Code 不要调用工具（`--allowed-tools ""`、`--max-turns 1`），让 DSH 工具 loop 保持唯一事实来源。Claude 仍可能发出形如 `{"tool":"name","arguments":{...}}` 的围栏 JSON 块；翻译器会扫描它们并呈现为 `tool-call` 块。误报风险：响应中的任何围栏 JSON 都可能命中——只要它的 `tool` 字段恰好命名了某个已注册的工具 schema。V2 应切换到 `--output-format stream-json` 以获得结构化事件。
@@ -135,3 +187,13 @@ JSON result 文档中的 `result` 文本成为 harness 分片；检测到的围�
 - 通过 Anthropic 格式 image blocks 支持视觉输入。
 - 一个小型 `--bare` 模式 sidecar，直接暴露 Claude Code 内部 session 的 Anthropic 格式 HTTP；这将整体替换子进程适配器，无需逐调用重写即可解锁原生工具调用、视觉与 prompt-cache 复用。
 - 子进程失败（如 OAuth 端点的瞬时 ECONNRESET）的可配置重试策略。
+
+<a id="dev-note"></a>
+### 开发备注
+
+<details>
+<summary>维护者工作上下文 — 点击展开</summary>
+
+无。
+
+</details>
