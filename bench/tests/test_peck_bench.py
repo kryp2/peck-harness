@@ -18,7 +18,9 @@ class PeckBenchTest(unittest.TestCase):
             "python-retry-policy",
             "python-config-merge",
         ])
-        self.assertEqual(set(models), {"omen-alpha", "muse-spark-1.3-contributor"})
+        self.assertEqual(set(models), {
+            "omen-alpha", "muse-spark-1.3-contributor", "deepseek-v4-flash",
+        })
 
     def test_paired_order_alternates(self) -> None:
         models = list(peck_bench.load_models(peck_bench.DEFAULT_MODELS).values())

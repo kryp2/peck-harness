@@ -1,6 +1,12 @@
 # IN_FLIGHT — deepseek-harness (Peck fork)
 _Sist oppdatert: 2026-09-08 (kveld)_
 
+## Bench status (English, 2026-09-07)
+
+The interrupted DeepSeek Flash benchmark change is being delivered from `feat/complete-deepseek-benchmark-2026-09-07`. The original Sept 4 branch and all raw run artifacts are preserved. `bench/cordis.yml` adds the Command Code route and `bench/models.json` includes `deepseek-v4-flash`. The smoke report records four successful cases per model for DeepSeek V4 Flash, Omen Alpha, and Muse Spark; each case ran once, costs are unknown, and these results do not establish a model ranking.
+
+Validation after recovery: the suite/model manifest validates and all seven benchmark unit tests pass. Next: harden grader timeout/process-failure recording before larger repeated comparisons. The previously mentioned stacked grader-hardening PR was not created; no such branch was found during recovery.
+
 ## Sist gjort
 - 08.09 kveld: **PR #30 CI nede fra 3 røde lanes til 2**. Fant og fikset en selvpåført regresjon fra ettermiddagen: `9ea8650b` la `fetch-depth: 0` på ALLE checkouts, men `scripts/ci-compatible-selfhosted.spec.ts:95` asserter node-compat sine egne checkout-opsjoner — meta-testen falt derfor i begge coverage-lanes. `66e445cb` skoper full historie til de to lanes som faktisk kjører fork-divergence-gaten (node-24 static + windows-observational). Resultat på `66e445cb`: static, benchmarks, node 22.19/24.9/26, alle windows-lanes og hele python-matrisen GRØNNE.
 - 08.09: lockfile (pinned pnpm 11 + overrides), lisens-gate (public MIT på refusal + metered-receipt), versjoner 0.1.3-alpha.2, brand-sletting, inventory 214/12, invariant-migrasjon.

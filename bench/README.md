@@ -14,9 +14,10 @@ Install this checkout's SDK after `pnpm install`, validate without an API call, 
 python -m pip install -e python/sdk
 python bench/peck_bench.py validate
 export OPENCODE_GO_API_KEY=...
+export COMMANDCODE_API_KEY=...
 python bench/peck_bench.py run --repetitions 3
 ```
 
-Use `--model omen-alpha` to select one model and `--output DIR` to move run artifacts. Each run preserves its copied workspace, Harness session log, grader output, and result JSON. The suite writes `summary.json` and `summary.md` after every completed attempt.
+Use `--model omen-alpha` to select one model and `--output DIR` to move run artifacts. The default matrix compares Omen Alpha, Muse Spark 1.3 Contributor, and DeepSeek V4 Flash through their configured gateways. Each run preserves its copied workspace, Harness session log, grader output, and result JSON. The suite writes `summary.json` and `summary.md` after every completed attempt.
 
 Fixtures must contain no secrets or production configuration. The Harness tools start in the copied fixture, but this MVP is not an operating-system sandbox. Do not use it with untrusted models or sensitive host state. A deterministic grader owns pass/fail. Missing provider usage stays unknown rather than being estimated, and routing decisions require several repetitions.
