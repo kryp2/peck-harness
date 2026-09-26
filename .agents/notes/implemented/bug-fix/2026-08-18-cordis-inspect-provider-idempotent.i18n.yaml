@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-18-cordis-inspect-provider-idempotent.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-18-cordis-inspect-provider-idempotent.md
-2026-08-18-cordis-inspect-provider-idempotent.md: b89bb8b7f9f2ac8aee19ab6ee03589481c0107d0
-2026-08-18-cordis-inspect-provider-idempotent.zh.md: fcad66b095a3b24f4269a5cba258df71d17896b3
+/agent-note-cordis-inspect-providers-register-idempotently:
+  en: 93709fc8df6620d0
+  zh: cd39ea6ab5e30616
+/agent-note-cordis-inspect-providers-register-idempotently/problem:
+  en: 2587da740f81c0c3
+  zh: 0cebd7ded5347136
+/agent-note-cordis-inspect-providers-register-idempotently/decision:
+  en: 1d460a9ee14a9feb
+  zh: ed28128e3ef1da57
+/agent-note-cordis-inspect-providers-register-idempotently/alternatives-considered:
+  en: 2c3c7a017c813e81
+  zh: c6c6727e535489ba
+/agent-note-cordis-inspect-providers-register-idempotently/consequences:
+  en: b0d63325132bfa92
+  zh: 34fcc4bc78cbe4fd

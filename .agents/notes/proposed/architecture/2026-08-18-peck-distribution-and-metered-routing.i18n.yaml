@@ -1,6 +1,37 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-18-peck-distribution-and-metered-routing.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-08-18-peck-distribution-and-metered-routing.md
-2026-08-18-peck-distribution-and-metered-routing.md: f0c2e919150df18b90468ed448db647a3d164d13
-2026-08-18-peck-distribution-and-metered-routing.zh.md: 4e454a059d5af51ab771a6eb9437defbce39adf5
+/agent-note-compose-peck-distribution-and-metered-model-routing:
+  en: 987a0f2e8328708c
+  zh: a4916029e4824b4c
+/agent-note-compose-peck-distribution-and-metered-model-routing/problem:
+  en: e34030efc1e63f9f
+  zh: 77adc7224a833cde
+/agent-note-compose-peck-distribution-and-metered-model-routing/proposal:
+  en: dd723afad49b6d8e
+  zh: 782e9ef011cc80dc
+/agent-note-compose-peck-distribution-and-metered-model-routing/access-classes:
+  en: c708cd4849c1895a
+  zh: db4ebf5fe8ad5213
+/agent-note-compose-peck-distribution-and-metered-model-routing/harness-composition:
+  en: f2639fc20990ea0f
+  zh: d3028a12d38338d5
+/agent-note-compose-peck-distribution-and-metered-model-routing/metered-request-and-receipt:
+  en: 65300d6c3eeb3869
+  zh: e9cb49cc033f8ed7
+/agent-note-compose-peck-distribution-and-metered-model-routing/catalog-routing-and-scheduling:
+  en: f5eda7bdd8ad1e25
+  zh: b8fba92dae23f1a1
+/agent-note-compose-peck-distribution-and-metered-model-routing/cross-agent-execution:
+  en: 904000f087ee0731
+  zh: bb3cbcdab3f96358
+/agent-note-compose-peck-distribution-and-metered-model-routing/alternatives-considered:
+  en: cd2ab8bb65718177
+  zh: d3c3f94a615af0fa
+/agent-note-compose-peck-distribution-and-metered-model-routing/acceptance-criteria:
+  en: 2c5a945cb001e4a2
+  zh: 577df099d4893c49
+/agent-note-compose-peck-distribution-and-metered-model-routing/risks:
+  en: c76e4d507f5b9f5a
+  zh: 28d1407da1d7692c

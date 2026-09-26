@@ -6,7 +6,7 @@ This reference inventories every path this fork changes relative to upstream `de
 
 ## Baseline and enforcement
 
-Divergence is measured against one pinned upstream merge-base: `b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`. That SHA lives in the `UPSTREAM_MERGE_BASE` constant of [scripts/verify-peck-fork.ts](../scripts/verify-peck-fork.ts) as its single home; this page repeats it for review only.
+Divergence is measured against one pinned upstream merge-base: `477b4f420553e8a52c2fbccc464d7561b239c443`. That SHA lives in the `UPSTREAM_MERGE_BASE` constant of [scripts/verify-peck-fork.ts](../scripts/verify-peck-fork.ts) as its single home; this page repeats it for review only.
 
 `pnpm run verify-peck-fork`, part of `doc-sync`, runs `git diff --name-only <merge-base>...HEAD` with local git only, and requires every returned path to match a pattern in the script's `FORK_PATH_GROUPS` manifest. A merge-base missing from history fails with refresh instructions; an unmatched path fails naming the path plus both update locations, the manifest array in the script and the ownership table below. The script manifest is the enforcement authority; the table here is its reviewed human counterpart, so a group edit lands in both files in one change.
 

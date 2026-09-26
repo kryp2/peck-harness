@@ -1,6 +1,61 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/guard/deployment-refusal/README.md
-README.md: a99bc41f454e98ce42db6949987e30ec3b7905d5
-README.zh.md: 7a21a9b08c4230c476f52de5f765683a7449eac1
+/:
+  en: 96cd35131c1d6e8c
+  zh: 0d77d345c1754d3e
+/deepseek-ai-dsh-guard-deployment-refusal:
+  en: 7f18ed98831a9f42
+  zh: 31f1b1129bdbd201
+/deepseek-ai-dsh-guard-deployment-refusal/summary:
+  en: e13947835b04eae2
+  zh: e15a2cf5ca89fed3
+/deepseek-ai-dsh-guard-deployment-refusal/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-guard-deployment-refusal/use-this-package:
+  en: 541de1eb47d3a03d
+  zh: 90c33cda326fef14
+/deepseek-ai-dsh-guard-deployment-refusal/use-this-package/when-to-choose-it:
+  en: 71f2f4bef6f9c985
+  zh: c0776cf9feafff6f
+/deepseek-ai-dsh-guard-deployment-refusal/use-this-package/minimal-configuration:
+  en: 6a9ad2d215d03731
+  zh: 3af103db069c879d
+/deepseek-ai-dsh-guard-deployment-refusal/use-this-package/what-you-get:
+  en: 9e37e4ae4351d192
+  zh: b7cf55eff3e32850
+/deepseek-ai-dsh-guard-deployment-refusal/understand-the-implementation:
+  en: 3fb8fdd2148096c7
+  zh: a743bea27f0882c9
+/deepseek-ai-dsh-guard-deployment-refusal/understand-the-implementation/refusal-rule:
+  en: 923c7267a0aab355
+  zh: bbc424e1908ec600
+/deepseek-ai-dsh-guard-deployment-refusal/understand-the-implementation/source-map:
+  en: cad94d3813e465c1
+  zh: 20fe43d2e2837555
+/deepseek-ai-dsh-guard-deployment-refusal/further-exploration:
+  en: aa5141a3f5a9c901
+  zh: 9c064b91254b2620
+/deepseek-ai-dsh-guard-deployment-refusal/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-guard-deployment-refusal/model-experience/startup-evaluation:
+  en: 9a252af2f37344f6
+  zh: 500c487625b4d679
+/deepseek-ai-dsh-guard-deployment-refusal/model-experience/startup-evaluation/what-the-model-sees:
+  en: 2a79e03155134ca4
+  zh: 22b78e1adb22a4e3
+/deepseek-ai-dsh-guard-deployment-refusal/model-experience/startup-evaluation/token-effect:
+  en: 168535af432f0906
+  zh: 24be14d267ec2096
+/deepseek-ai-dsh-guard-deployment-refusal/model-experience/startup-evaluation/kv-cache-effect:
+  en: c41ec4b8b5e248b3
+  zh: d1496ac5127c3188
+/deepseek-ai-dsh-guard-deployment-refusal/known-limitations-and-deferred-work:
+  en: 8152be289399891b
+  zh: 1ab5b236a3395d86
+/deepseek-ai-dsh-guard-deployment-refusal/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

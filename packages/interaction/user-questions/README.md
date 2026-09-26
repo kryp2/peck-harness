@@ -88,6 +88,8 @@ No direct invalidation; the named consumer owns any request-prefix changes.
 
 None.
 
+The optional plan-review `callId` identifies the logged tool invocation for document navigation. It does not change the answer or its validation.
+
 </details>
 
 **Runtime invariant:** No companion is published. Answerer attempts resolve per ask through the bus and asks return directly to their caller; the seam publishes no independent request/answer audit stream.

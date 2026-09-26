@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for peck-fork.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/peck-fork.md
-peck-fork.md: a7fbd3b7c20a041410efd3d0013578dc064d31e5
-peck-fork.zh.md: 4bcb4e423dd63b23a04949f26ce37f32b2e65aed
+/peck-fork-divergence-inventory:
+  en: bbd1f1799e15cdd8
+  zh: 031187c5344b2752
+/peck-fork-divergence-inventory/baseline-and-enforcement:
+  en: 85538517fe84f560
+  zh: 23060f56bbd06ba9
+/peck-fork-divergence-inventory/refresh-procedure:
+  en: 45728ad64bb33bb0
+  zh: 8e4e77b01b82bb5f
+/peck-fork-divergence-inventory/ownership-groups:
+  en: 46491e0931ae6a64
+  zh: 3cb6aebb692af38e
+/peck-fork-divergence-inventory/responsibilities:
+  en: 62cede1d9c909dc4
+  zh: a0391ff9b6c3070d

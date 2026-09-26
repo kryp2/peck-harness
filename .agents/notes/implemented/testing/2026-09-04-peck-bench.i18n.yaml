@@ -1,6 +1,22 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-04-peck-bench.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-09-04-peck-bench.md
-2026-09-04-peck-bench.md: 0fd0c3853634ea89dfd26b79f063af2e8888756a
-2026-09-04-peck-bench.zh.md: 60a6a9dfd4edc80231f51444c68eb66a076e4373
+/agent-note-peck-bench-model-comparison:
+  en: 7a9e6972b2cdd50e
+  zh: 48190c5bc7587dcf
+/agent-note-peck-bench-model-comparison/problem:
+  en: 3057116abc291e5a
+  zh: 0483be720daae127
+/agent-note-peck-bench-model-comparison/decision:
+  en: 32bee45e05a21a2a
+  zh: 4746a2dc158ff6c1
+/agent-note-peck-bench-model-comparison/security-limitation:
+  en: ba13c38af7291c43
+  zh: 55a1addb101d7633
+/agent-note-peck-bench-model-comparison/alternatives-considered:
+  en: d49343f3bf186738
+  zh: 2b3e76ff8bc3ee4a
+/agent-note-peck-bench-model-comparison/consequences:
+  en: 6f99870953b104a4
+  zh: 65df13e08de10761

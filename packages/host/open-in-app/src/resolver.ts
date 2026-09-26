@@ -17,7 +17,7 @@ import { readdir, readFile, stat } from 'node:fs/promises'
 import { homedir, platform as osPlatform } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
 import {
-  canOpenNativePath, openNativePath, runNativeCommand, type NativeCommandRunner,
+  canOpenNativePath, openNativePath, runNativeCommand, desktopEntryFields, desktopDataDirectories, type NativeCommandRunner,
 } from '@deepseek-ai/dsh-native-command'
 import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
 import {
@@ -98,6 +98,8 @@ export const launchDetachedApp: OpenInAppLauncher = (command, args, options) =>
 /** Injectable platform facts for deterministic tests. */
 export interface OpenInAppInternals {
   platform?: NodeJS.Platform
+  /** SSH launch fact from the inherited process layer, independent of `.env` values. */
+  ssh?: boolean
   /** Bundle-directory roots replacing `/Applications` and `~/Applications`. */
   applicationRoots?: readonly string[]
   /** Environment for `${VAR}`/`%VAR%` expansion in candidates and registry values. */
@@ -113,6 +115,7 @@ export interface OpenInAppInternals {
 /** Platform facts after the one explicit defaulting step at each public entry. */
 export interface ResolvedInternals {
   platform: NodeJS.Platform
+  ssh: boolean
   applicationRoots: readonly string[]
   env: Readonly<Record<string, string | undefined>>
   home: string
@@ -137,6 +140,7 @@ export function resolveInternals(internals: OpenInAppInternals): ResolvedInterna
   }
   return {
     platform: internals.platform ?? osPlatform(),
+    ssh: internals.ssh ?? false,
     applicationRoots: internals.applicationRoots ?? ['/Applications', join(home, 'Applications')],
     env: internals.env ?? process.env,
     home,
@@ -375,24 +379,12 @@ export interface DesktopEntry {
  * @returns the recognized fields; keys outside the entry section are ignored.
  */
 export function parseDesktopEntry(text: string): DesktopEntry {
-  let inEntry = false
-  const fields: { exec?: string; tryExec?: string; icon?: string } = {}
-  for (const line of text.split(/\r?\n/)) {
-    const trimmed = line.trim()
-    if (trimmed.startsWith('[')) {
-      inEntry = trimmed === '[Desktop Entry]'
-      continue
-    }
-    if (!inEntry) continue
-    const separator = trimmed.indexOf('=')
-    if (separator < 0) continue
-    const key = trimmed.slice(0, separator).trim()
-    const value = trimmed.slice(separator + 1).trim()
-    if (key === 'Exec') fields.exec = value
-    else if (key === 'TryExec') fields.tryExec = value
-    else if (key === 'Icon') fields.icon = value
+  const fields = desktopEntryFields(text)
+  return {
+    ...(fields.Exec === undefined ? {} : { exec: fields.Exec }),
+    ...(fields.TryExec === undefined ? {} : { tryExec: fields.TryExec }),
+    ...(fields.Icon === undefined ? {} : { icon: fields.Icon }),
   }
-  return fields
 }
 
 /**
@@ -401,9 +393,7 @@ export function parseDesktopEntry(text: string): DesktopEntry {
  * @returns the data directories, freedesktop defaults applied.
  */
 export function xdgDataDirectories(internals: ResolvedInternals): readonly string[] {
-  const dataHome = internals.env['XDG_DATA_HOME'] ?? join(internals.home, '.local', 'share')
-  const dataDirs = internals.env['XDG_DATA_DIRS'] ?? '/usr/local/share:/usr/share'
-  return [dataHome, ...dataDirs.split(':').filter(dir => dir !== '')]
+  return desktopDataDirectories(internals.home, internals.env)
 }
 
 /**
@@ -617,12 +607,13 @@ async function locate(
  * @param app - catalog entry.
  * @param probeTimeoutMs - per-command deadline for resolution host commands.
  * @param internals - platform and runner hooks for deterministic tests.
- * @returns the verified launch, or null when the entry is not installed here.
+ * @returns the verified launch, or null during SSH launches or when the entry is not installed here.
  */
 export async function resolveLaunch(
   app: OpenInAppApp, probeTimeoutMs: number, internals: OpenInAppInternals = {},
 ): Promise<OpenInAppResolvedLaunch | null> {
   const resolved = resolveInternals(internals)
+  if (resolved.ssh) return null
   return resolveWithRegistry(app, probeTimeoutMs, new RegistryViewOnce(probeTimeoutMs, resolved), resolved)
 }
 
@@ -648,6 +639,7 @@ async function resolveWithRegistry(
  * The returned map is the mutable authority the caller owns — the routes
  * serve its keys and launch from its values, and a stale entry is replaced
  * or removed in place after an `ENOENT` launch.
+ * An SSH launch returns an empty map without probing.
  * @param probeTimeoutMs - per-command deadline for resolution host commands.
  * @param internals - platform and runner hooks for deterministic tests.
  * @returns catalog id to verified launch, in catalog order.
@@ -656,6 +648,9 @@ export async function resolveOpenInAppApps(
   probeTimeoutMs: number, internals: OpenInAppInternals = {},
 ): Promise<Map<string, OpenInAppResolvedLaunch>> {
   const resolved = resolveInternals(internals)
+  if (resolved.ssh) {
+    return new Map()
+  }
   const registry = new RegistryViewOnce(probeTimeoutMs, resolved)
   const entries = await Promise.all(OPEN_IN_APP_CATALOG.map(async app =>
     [app.id, await resolveWithRegistry(app, probeTimeoutMs, registry, resolved)] as const))
@@ -685,8 +680,8 @@ function isMissingExecutable(error: unknown): boolean {
  * Open one directory through the OS shell's open verb under the launch watch
  * window: the opener command completing inside the window decides the
  * outcome, and an opener still running when it closes counts as launched and
- * keeps running (a cold `powershell.exe` start can outlive the window; its
- * late settlement is swallowed because the request already answered).
+ * keeps running (a cold shell opener can outlive the window; its late
+ * settlement is swallowed because the request already answered).
  */
 function runShellOpen(
   path: string, watchMs: number, internals: ResolvedInternals,

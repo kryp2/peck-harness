@@ -1,6 +1,34 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-24-hosted-multi-user-topology.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-08-24-hosted-multi-user-topology.md
-2026-08-24-hosted-multi-user-topology.md: d9c106c93e3b2cbd21f06b19d7dc16fd54007540
-2026-08-24-hosted-multi-user-topology.zh.md: f0bf54914f3846725c3e2d521d011de38950d423
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login:
+  en: 2fcaec4eb67e5e70
+  zh: 4265669e71620e4c
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/problem:
+  en: 2c0015594f504982
+  zh: af2d0f9ea1dbbaa3
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/proposal:
+  en: 3c1cd4d3355616cd
+  zh: f593579848f00a80
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/proposal/topology:
+  en: 4fdd2d454a6282c9
+  zh: 2ae8bb0c0fcdf199
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/proposal/identity-and-payment-flow:
+  en: dd15c1dfd3ee85ca
+  zh: cdc716a38cd31b5a
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/proposal/workspace-lifecycle:
+  en: c77b50400be6397a
+  zh: dc7a8ae5bfe4460c
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/proposal/phasing:
+  en: be8d32694fb5eabf
+  zh: 034f6e6ae2305c72
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/alternatives-considered:
+  en: 754100883c54003f
+  zh: 1ebe2e9c5f6ebb46
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/acceptance-criteria:
+  en: f261d2a110b00ed2
+  zh: 3dd749482e7647ba
+/agent-note-host-peck-harness-as-a-multi-user-service-behind-wallet-login/risks:
+  en: b053f64cddc81bd3
+  zh: d1a0c4815257e0d8

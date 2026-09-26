@@ -19,7 +19,7 @@ const ROOT = resolve(import.meta.dirname, '..')
  * Upstream commit this fork's divergence is measured against. Refresh after
  * every upstream sync: `git fetch upstream && git merge-base upstream/master HEAD`.
  */
-export const UPSTREAM_MERGE_BASE = 'b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed'
+export const UPSTREAM_MERGE_BASE = '477b4f420553e8a52c2fbccc464d7561b239c443'
 
 /** Who owns a diverged path class and how an upstream sync treats it. */
 export type ForkPathOwner = 'peck' | 'upstream-shared'

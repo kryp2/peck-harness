@@ -1,6 +1,22 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-22-inspect-registry-live-holder.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-22-inspect-registry-live-holder.md
-2026-08-22-inspect-registry-live-holder.md: adc2771798d708eb1ee4a0fc092b0f857ccb6530
-2026-08-22-inspect-registry-live-holder.zh.md: 15c274dfec88b9f12a64c11c14dfbda5df1c5dea
+/agent-note-inspect-registry-serves-queries-through-a-live-holder:
+  en: bf7c4980d392d384
+  zh: 782ed0ee4c5462d5
+/agent-note-inspect-registry-serves-queries-through-a-live-holder/problem:
+  en: de022bbcec05b69c
+  zh: 6674cbac818bbd1f
+/agent-note-inspect-registry-serves-queries-through-a-live-holder/decision:
+  en: e46f69710becb1bd
+  zh: a2d81c585e86a105
+/agent-note-inspect-registry-serves-queries-through-a-live-holder/alternatives-considered:
+  en: 9c351a224eb6dc1f
+  zh: 6fb4b1348a5e64ae
+/agent-note-inspect-registry-serves-queries-through-a-live-holder/verification:
+  en: d28f77a63b2cce59
+  zh: b018f20faa3ac575
+/agent-note-inspect-registry-serves-queries-through-a-live-holder/consequences:
+  en: 966d01df835e5087
+  zh: e02f9e029a2ac805

@@ -1,6 +1,76 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/llm/llm-claude-cli/README.md
-README.md: 41cb1aef6a9b621f908aefa3d9feae34e369df05
-README.zh.md: 7aa478919a4cf543aa0ac25e9f4a51a4ec84dd61
+/:
+  en: eee1ec913e89eb83
+  zh: 918b01abd82fe520
+/deepseek-ai-dsh-llm-claude-cli:
+  en: 45069f29587f9392
+  zh: b6436fedf2558468
+/deepseek-ai-dsh-llm-claude-cli/summary:
+  en: 2318cbfb09dee8da
+  zh: 86787e22eeb38070
+/deepseek-ai-dsh-llm-claude-cli/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-llm-claude-cli/use-this-package:
+  en: a5198e3e1c19d611
+  zh: 5cb4f85dd34f1383
+/deepseek-ai-dsh-llm-claude-cli/use-this-package/when-to-choose-it:
+  en: 73734cae64fcda5e
+  zh: 762cbaed02a5f7ed
+/deepseek-ai-dsh-llm-claude-cli/use-this-package/minimal-configuration:
+  en: 3b812d9518ef30f0
+  zh: 2d1361b40a35484c
+/deepseek-ai-dsh-llm-claude-cli/use-this-package/model-catalog:
+  en: 092c74a6c514305f
+  zh: 707cf11b7de01717
+/deepseek-ai-dsh-llm-claude-cli/use-this-package/wire-protocol:
+  en: b1b7ae961166fafc
+  zh: 73231c121fa01ad9
+/deepseek-ai-dsh-llm-claude-cli/understand-the-implementation:
+  en: 4a161d0744f520cf
+  zh: 5f480afeb2124eb2
+/deepseek-ai-dsh-llm-claude-cli/understand-the-implementation/design-concept:
+  en: 5be747dcf50ae450
+  zh: 9f09f2798d5b98c4
+/deepseek-ai-dsh-llm-claude-cli/understand-the-implementation/source-map:
+  en: 90d94793d57ecb28
+  zh: 37a5edf473c89a04
+/deepseek-ai-dsh-llm-claude-cli/further-exploration:
+  en: 36b206290d127da9
+  zh: bf3773b57114fb61
+/deepseek-ai-dsh-llm-claude-cli/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-request:
+  en: 9c92f80dbdb89771
+  zh: c56c8a65f7bbb79c
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-request/what-the-model-sees:
+  en: 070170df778b8687
+  zh: 0e3c69544e8c3229
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-request/token-effect:
+  en: 676fbfae7f194cd1
+  zh: bd27d82e343fa02f
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-request/kv-cache-effect:
+  en: ca4efef7896fc0b6
+  zh: 6bf52429f15f9042
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-response:
+  en: 9ca1d2d270598047
+  zh: 50d0a906ee1c1484
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-response/what-the-model-sees:
+  en: 915a0ce0082741f5
+  zh: 00be0a6be9c216a8
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-response/token-effect:
+  en: e894f483a626cf8b
+  zh: 7be9535a8a14f5bf
+/deepseek-ai-dsh-llm-claude-cli/model-experience/claude-code-cli-response/kv-cache-effect:
+  en: 330a158e23730898
+  zh: 7356513235a1047f
+/deepseek-ai-dsh-llm-claude-cli/known-limitations-and-deferred-work:
+  en: 8ccdf4c078a24ca7
+  zh: 7a6926fb953df61b
+/deepseek-ai-dsh-llm-claude-cli/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

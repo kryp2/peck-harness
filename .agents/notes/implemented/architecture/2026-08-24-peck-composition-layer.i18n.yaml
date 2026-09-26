@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-24-peck-composition-layer.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-24-peck-composition-layer.md
-2026-08-24-peck-composition-layer.md: 0b83ac2c58d3b8be00b7612e64e4680f3d1a19e2
-2026-08-24-peck-composition-layer.zh.md: 403b2c217d9814f92fc66ff901c4cc953b85c1cf
+/agent-note-the-peck-composition-layer:
+  en: 4303d1a21ce73628
+  zh: f3bdc2f0b031df14
+/agent-note-the-peck-composition-layer/problem:
+  en: 4ff3a4089809bb4e
+  zh: cd30f36562384da0
+/agent-note-the-peck-composition-layer/decision:
+  en: 337d22270f7ee789
+  zh: a8a4f053902b03a3
+/agent-note-the-peck-composition-layer/alternatives-considered:
+  en: ea8d5c8db2992f4d
+  zh: 218e811ea63238fa
+/agent-note-the-peck-composition-layer/consequences:
+  en: 680e84d093b8434a
+  zh: 5d2ec3087d3a15c1

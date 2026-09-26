@@ -6,29 +6,20 @@
  * whether the workspace connect created it or reused an existing blank one,
  * which is why staging cannot simply ride along on `sessions.create`.
  *
- * The stage is forgotten once applied: the next new session starts from the
- * deployment default again, matching the workspace picker beside it.
+ * The stage is forgotten once applied. The next new session starts from the
+ * Host-effective default again.
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // Type-only: pulls the ctx.remote merge into this program.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+// Type-only: pulls the Developer tools preference (ctx.configForms) into this program.
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type {} from '@deepseek-ai/dsh-agent-presets/types'
+import type {} from '@deepseek-ai/dsh-agent-preset-registry/types'
 import { presetOptions, readRoster } from './settings-store.ts'
 import type { AgentPresetOption } from './settings-store.ts'
-
-/**
- * How long a staged pick keeps waiting for the session its flow produces.
- *
- * A stage bridges a pick and the session a workspace connect or a creator
- * start mints right after it — seconds, not minutes. Once this window closes
- * the flow is gone, and spending the leftover on whatever blank session later
- * becomes current switches sessions nobody is choosing for; a browser full of
- * such leftovers fires them all when any one of them lands.
- */
-const STAGE_MAX_AGE_MS = 120_000
 
 /** Hero-chip snapshot. */
 export interface AgentPresetSeatState {
@@ -47,8 +38,27 @@ export interface AgentPresetSeatState {
   introduce: boolean
 }
 
+/**
+ * A stage bridges a pick and the session a workspace connect or a creator
+ * start mints right after it — seconds, not minutes. Once this window closes
+ * the flow is gone, and spending the leftover on whatever blank session later
+ * becomes current switches sessions nobody is choosing for; a browser full of
+ * such leftovers fires them all when any one of them lands.
+ */
+const STAGE_MAX_AGE_MS = 120_000
+
 const INITIAL: AgentPresetSeatState = {
   options: [], current: '', error: null, busy: false, introduce: false,
+}
+
+/** Mutable one-shot preset choice shared across Provider-bound seat controllers. */
+export interface AgentPresetStage {
+  /** Preset awaiting application; absence means no staged choice. */
+  id: string | undefined
+  /** Whether the receiving chip should announce the applied choice once. */
+  introduce: boolean
+  /** When the pending choice was staged; a stage older than {@link STAGE_MAX_AGE_MS} is dropped unapplied. */
+  stagedAt?: number
 }
 
 /** Stages the next session's preset and applies it when one appears. */
@@ -57,16 +67,15 @@ export class AgentPresetSeatController {
   readonly store: SnapshotStore<AgentPresetSeatState> = createSnapshotStore(INITIAL)
 
   /**
-   * The deployment default, so a consumed stage can fall back to it without
+   * The Host-effective default, so a consumed stage can fall back to it without
    * re-reading the roster.
    */
   private fallback = ''
 
-  /**
-   * The pick waiting for a session, and when it was staged. One value so the
-   * id and its age cannot drift; cleared once applied, dropped, or expired.
-   */
-  private stagedPick: { readonly id: string; readonly at: number } | undefined
+  /** Only the newest roster read may publish after overlapping refreshes. */
+  private loadGeneration = 0
+  /** Completion of the active Host selection; Settings choices wait before staging. */
+  private pendingSelection: Promise<undefined> | undefined
 
   constructor(
     private readonly ctx: ClientContext,
@@ -75,36 +84,54 @@ export class AgentPresetSeatController {
       SessionSummary,
       'id' | 'blank' | 'projectionValues'
     > | undefined,
+    private readonly staged: AgentPresetStage = { id: undefined, introduce: false },
   ) {}
 
   private set(patch: Partial<AgentPresetSeatState>): void {
     this.store.set({ ...this.store.getSnapshot(), ...patch })
   }
 
+  private clearStage(): void {
+    this.staged.id = undefined
+    this.staged.introduce = false
+    this.staged.stagedAt = undefined
+  }
+
+  /** Developer tools are the single gate over preset selection. */
+  private selectionAvailable(): boolean {
+    return this.ctx.configForms.developerTools.enabled.getSnapshot()
+  }
+
   /**
-   * Read the roster and open the chip on the deployment default.
+   * Read the roster and open the chip on the Host-effective default.
   * @returns once the snapshot reflects the host.
   */
   async load(): Promise<void> {
+    const generation = ++this.loadGeneration
     const roster = await readRoster(this.ctx)
+    if (generation !== this.loadGeneration) return
     if (!roster.ok) {
       this.set({ error: roster.error })
       return
     }
     const { presets } = roster.value
+    // A stage outlives the screen that made it; Developer tools may have gone off since.
+    if (!this.selectionAvailable()) this.clearStage()
     this.fallback = presets.find(preset => preset.isDefault)?.id ?? presets[0]?.id ?? ''
     const session = this.currentSession()
     this.set({
       options: presetOptions(presets),
       // Staged pick first, then the composition the current session
-      // already carries, then the deployment default. The middle term is
+      // already carries, then the Host-effective default. The middle term is
       // what keeps a late-landing load from regressing the display after
       // an applied stage was consumed — the chip mounts (and loads) only
       // once the flow's session is current, so the reply can arrive after
       // apply() already composed it.
-      current: this.stagedPick?.id ?? (session === undefined ? this.fallback : presetOf(session) ?? ''),
+      current: this.staged.id ?? (session === undefined ? this.fallback : presetOf(session) ?? ''),
       error: null,
+      introduce: this.staged.introduce,
     })
+    await this.apply()
   }
 
   /**
@@ -122,8 +149,7 @@ export class AgentPresetSeatController {
   async select(id: string): Promise<string | undefined> {
     if (this.store.getSnapshot().busy) return undefined
     this.stage(id)
-    await this.apply()
-    return this.store.getSnapshot().error ?? undefined
+    return await this.apply()
   }
 
   /**
@@ -138,13 +164,43 @@ export class AgentPresetSeatController {
    * chip should announce itself on the session it lands on.
    */
   stage(id: string, introduce = false): void {
-    this.stagedPick = { id, at: Date.now() }
+    this.staged.id = id
+    this.staged.introduce = introduce
+    this.staged.stagedAt = Date.now()
     this.set({ current: id, error: null, introduce })
+  }
+
+  /**
+   * Capture the exact blank Session a Settings action may bring along.
+   * @returns its id, or undefined outside a blank Session.
+   */
+  blankSessionId(): SessionSummary['id'] | undefined {
+    const session = this.currentSession()
+    return session?.blank === true ? session.id : undefined
+  }
+
+  /**
+   * Apply a Settings choice only if its captured Session is still current and
+   * blank after any pending selection settles. The selection uses the existing stage/apply path.
+   * @param expectedSessionId - blank Session captured before the Settings write.
+   * @param id - the effective default that the write persisted.
+   * @returns the Host refusal text, or undefined when applied or no longer relevant.
+   */
+  async syncBlankSession(
+    expectedSessionId: SessionSummary['id'],
+    id: string,
+  ): Promise<string | undefined> {
+    while (this.pendingSelection !== undefined) await this.pendingSelection
+    const session = this.currentSession()
+    if (session === undefined || !session.blank || session.id !== expectedSessionId) return undefined
+    this.stage(id)
+    return await this.apply()
   }
 
   /** Acknowledge the introduction cue once the chip has played it. */
   introduced(): void {
     if (!this.store.getSnapshot().introduce) return
+    this.staged.introduce = false
     this.set({ introduce: false })
   }
 
@@ -153,59 +209,65 @@ export class AgentPresetSeatController {
    *
    * Called both by `select()` and by whoever observes the current session
    * changing, because the session may appear either before or after the pick.
-   * @returns once the switch settled, or immediately when there is nothing to do.
+   * List updates do not repeat a selection while its response is pending.
+   * @returns this attempt's Host refusal, or undefined when successful or no switch starts.
    */
-  async apply(): Promise<void> {
+  async apply(): Promise<string | undefined> {
+    if (this.store.getSnapshot().busy) return
+    const available = this.selectionAvailable()
+    // A stage made while Developer tools were on must not outlive them.
+    if (!available) this.clearStage()
     // A stage that outlived its flow's window is a pick nobody is about to
     // make; drop it before it spends itself on whatever session arrives next.
-    // A list change while a select is in flight re-enters here; the in-flight
-    // call already carries the pick, and a second wire call would only race it.
-    if (this.store.getSnapshot().busy) return
-    const session = this.currentSession()
-    const stagedPick = this.stagedPick
-    // No pick waiting: keep the display reconciled with the composition the
-    // current session already carries (or the deployment default when there is
-    // no session yet), so a late-landing session or roster cannot leave a stale
-    // value on the chip.
-    if (stagedPick === undefined) {
-      const current = session === undefined ? this.fallback : presetOf(session) ?? ''
-      if (current !== this.store.getSnapshot().current) this.set({ current })
-      return
+    if (this.staged.stagedAt !== undefined && Date.now() - this.staged.stagedAt > STAGE_MAX_AGE_MS) {
+      this.clearStage()
     }
-    if (Date.now() - stagedPick.at > STAGE_MAX_AGE_MS) {
-      this.stagedPick = undefined
-      this.set({ current: this.fallback })
+    const staged = this.staged.id
+    const session = this.currentSession()
+    if (staged === undefined) {
+      const current = session === undefined ? this.fallback : presetOf(session) ?? ''
+      const shown = this.store.getSnapshot()
+      // Hiding the chip also withdraws the introduction cue armed for it;
+      // ordinary list movement leaves that cue to the chip that plays it.
+      if (!available && shown.introduce) this.set({ current, introduce: false })
+      else if (current !== shown.current) this.set({ current })
       return
     }
     if (session === undefined) return
-    const staged = stagedPick.id
     // A started session's history was produced under its own composition; the
     // host refuses the swap, so the stage is no longer meaningful.
     if (!session.blank || presetOf(session) === staged) {
-      this.stagedPick = undefined
+      this.clearStage()
       return
     }
-    this.set({ busy: true, error: null })
-    const result = await this.ctx.remote.agentPresets.select(session.id, staged)
-    this.stagedPick = undefined
-    if (!result.ok) {
-      const { error } = result
-      this.set({
-        busy: false,
-        // A refusal carries its cause twice: `message` wraps it in the
-        // roster's own frame, which names the preset the surface reporting
-        // this already names, and a `reason` detail holds the same cause
-        // without it. Read by the detail rather than by the code, because
-        // every refusal that has a cause to give names it the same way.
-        error: 'reason' in error.details && typeof error.details.reason === 'string'
+    const completion = Promise.withResolvers<undefined>()
+    this.pendingSelection = completion.promise
+    this.clearStage()
+    try {
+      this.set({ busy: true, error: null })
+      const result = await this.ctx.remote.agentPresets.select(session.id, staged)
+      if (!result.ok) {
+        const { error } = result
+        const refusal = 'reason' in error.details && typeof error.details.reason === 'string'
           ? error.details.reason
-          : error.message,
-        current: presetOf(session) ?? '',
-      })
-      return
+          : error.message
+        this.set({
+          // A refusal carries its cause twice: `message` wraps it in the
+          // roster's own frame, which names the preset the surface reporting
+          // this already names, and a `reason` detail holds the same cause
+          // without it. Read by the detail rather than by the code, because
+          // every refusal that has a cause to give names it the same way.
+          error: refusal,
+          current: this.staged.id ?? presetOf(session) ?? '',
+        })
+        return refusal
+      }
+      this.set({ current: this.staged.id ?? result.value })
+    } finally {
+      this.pendingSelection = undefined
+      this.set({ busy: false })
+      completion.resolve(undefined)
     }
-    // Consumed: the next new session opens on the deployment default again.
-    this.set({ busy: false, current: result.value })
   }
 }
 

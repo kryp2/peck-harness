@@ -1,6 +1,55 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/interaction/telegram-answerer/README.md
-README.md: 116efd50ddecb7e5f6a56ff65c25b238fd12c2f9
-README.zh.md: 0b792b95f9ebd38c0ee7b5152956d037b9524333
+/:
+  en: 54069c6d0745a1bb
+  zh: 906d44e269f37391
+/deepseek-ai-dsh-telegram-answerer:
+  en: 20e2de2cf54e96cb
+  zh: 9d13e6655dfe5b1a
+/deepseek-ai-dsh-telegram-answerer/summary:
+  en: 6dc53068984d333a
+  zh: 0346f1aa49bdf0a3
+/deepseek-ai-dsh-telegram-answerer/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-telegram-answerer/use-this-package:
+  en: 0d3931db14088d20
+  zh: 43ce4b72f7074d22
+/deepseek-ai-dsh-telegram-answerer/use-this-package/when-to-choose-it:
+  en: 8b5a88dd0b92cd44
+  zh: 2186dd2be1b24170
+/deepseek-ai-dsh-telegram-answerer/use-this-package/minimal-configuration:
+  en: b1915a8e5f826bef
+  zh: d2ca66867f332bdb
+/deepseek-ai-dsh-telegram-answerer/use-this-package/what-you-get:
+  en: 3a6820e369ce865e
+  zh: 0f366f8c16a7b8cf
+/deepseek-ai-dsh-telegram-answerer/understand-the-implementation:
+  en: a404997c34a5588e
+  zh: be2bc964881e5948
+/deepseek-ai-dsh-telegram-answerer/understand-the-implementation/reply-correlation:
+  en: 255fde30c6613e89
+  zh: 98de4b9bfeec0164
+/deepseek-ai-dsh-telegram-answerer/understand-the-implementation/loser-cleanup:
+  en: 204181d661b56141
+  zh: f7766dc1d55bbedf
+/deepseek-ai-dsh-telegram-answerer/understand-the-implementation/source-map:
+  en: 2f43053e16b1366a
+  zh: 50c157b902fc1214
+/deepseek-ai-dsh-telegram-answerer/further-exploration:
+  en: bf3a7b5aa66e1988
+  zh: 5b7f0ef621622867
+/deepseek-ai-dsh-telegram-answerer/model-experience:
+  en: 3d4adfc5c69a6957
+  zh: e2a4121c6a949a4e
+/deepseek-ai-dsh-telegram-answerer/model-experience/kv-cache-effect:
+  en: d412131ffe4fcc4f
+  zh: c40cd27d94148710
+/deepseek-ai-dsh-telegram-answerer/known-limitations-and-deferred-work:
+  en: c0351d82dadcd91a
+  zh: 97d319de0a6496a4
+/deepseek-ai-dsh-telegram-answerer/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

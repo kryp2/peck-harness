@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-18-session-usage-projection.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-18-session-usage-projection.md
-2026-08-18-session-usage-projection.md: 8fc78313da890eb336c4a636f3048fdfc6a76b6e
-2026-08-18-session-usage-projection.zh.md: 766e9365d2c0544e18b1bffaecd2920eabe691c7
+/agent-note-per-route-usage-projection-for-metered-provider-accounting:
+  en: 4967716375e6accc
+  zh: 783ed6743fd19aee
+/agent-note-per-route-usage-projection-for-metered-provider-accounting/problem:
+  en: 208325eef4d25ed0
+  zh: 6e0905ab692cba31
+/agent-note-per-route-usage-projection-for-metered-provider-accounting/decision:
+  en: 3c0cdeb810838dca
+  zh: c372630e52717783
+/agent-note-per-route-usage-projection-for-metered-provider-accounting/alternatives-considered:
+  en: fc7173899e31e85f
+  zh: e5c8520543c2d9e6
+/agent-note-per-route-usage-projection-for-metered-provider-accounting/consequences:
+  en: 8cf498b0cf975457
+  zh: 0370e114c258266f

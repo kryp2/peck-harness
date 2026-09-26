@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-24-deployment-refusal-guard.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-24-deployment-refusal-guard.md
-2026-08-24-deployment-refusal-guard.md: 61f881fa0f2b066d25d5a4d789fd1bb8da4b9d4b
-2026-08-24-deployment-refusal-guard.zh.md: 0c5018eae5d8a1912514b0bc6df64f6629258880
+/agent-note-deployment-refusal-guard-over-declared-facts:
+  en: 6255799a67f0b675
+  zh: 718caf1352ad7d96
+/agent-note-deployment-refusal-guard-over-declared-facts/problem:
+  en: 8a6bc1d0f44cf077
+  zh: d9606ac8bdc557b5
+/agent-note-deployment-refusal-guard-over-declared-facts/decision:
+  en: ff8ad4511bd06b8b
+  zh: 57205486299d8d3a
+/agent-note-deployment-refusal-guard-over-declared-facts/alternatives-considered:
+  en: 8c3aeca4e4181d94
+  zh: f259a4eda4eabc4d
+/agent-note-deployment-refusal-guard-over-declared-facts/consequences:
+  en: de6b5e401d47b8c3
+  zh: 0356b922b16b6604

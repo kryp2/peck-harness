@@ -6,7 +6,7 @@
 
 ## 基线与执行
 
-分歧相对一个固定的上游合并基线度量：`b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed`。该 SHA 的唯一权威存放处是 [scripts/verify-peck-fork.ts](../scripts/verify-peck-fork.ts) 中的 `UPSTREAM_MERGE_BASE` 常量；本页重复它是为了评审便利。
+分歧相对一个固定的上游合并基线度量：`477b4f420553e8a52c2fbccc464d7561b239c443`。该 SHA 的唯一权威存放处是 [scripts/verify-peck-fork.ts](../scripts/verify-peck-fork.ts) 中的 `UPSTREAM_MERGE_BASE` 常量；本页重复它是为了评审便利。
 
 `pnpm run verify-peck-fork`（属于 `doc-sync`）只用本地 git 运行 `git diff --name-only <merge-base>...HEAD`，并要求返回的每一条路径都命中脚本中 `FORK_PATH_GROUPS` 清单里的某个模式。基线 SHA 在历史中缺失时按刷新指引报错；未匹配的路径会同时点名该路径与两处更新位置——脚本中的清单数组和下方的归属表。脚本是执行的权威；这里的表格是其经过评审的人工对应面，因此对分组的修改必须在同一次变更中同时落到两个文件。
 

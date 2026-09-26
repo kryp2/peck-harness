@@ -1,6 +1,52 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/session/session-usage/README.md
-README.md: 8d08034d0fda4a4046f23a08b22a970e9d38166f
-README.zh.md: f21de6cb46249dcd96a6864e6123c46d5e70903f
+/:
+  en: 19bbe36bd9af76dc
+  zh: 8d9f8419aef92abe
+/deepseek-ai-dsh-session-usage:
+  en: b3d4f4d3e0bd7694
+  zh: 440af8fd467a88bc
+/deepseek-ai-dsh-session-usage/summary:
+  en: 69faa1cb7e71518e
+  zh: 3b65e865d016e204
+/deepseek-ai-dsh-session-usage/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-session-usage/use-this-package:
+  en: 36bb7e4084b9b7cb
+  zh: 7ea80766d87133f5
+/deepseek-ai-dsh-session-usage/use-this-package/when-to-choose-it:
+  en: f082c1014ba97c82
+  zh: c05f630b3a2da245
+/deepseek-ai-dsh-session-usage/use-this-package/minimal-configuration:
+  en: ded224e66da174c1
+  zh: c94fcefa5d2fe067
+/deepseek-ai-dsh-session-usage/use-this-package/what-you-get:
+  en: c3809781565640cf
+  zh: 95967f20cbccd94e
+/deepseek-ai-dsh-session-usage/understand-the-implementation:
+  en: 78096665ba94e1cd
+  zh: 9dc685dba832933b
+/deepseek-ai-dsh-session-usage/understand-the-implementation/fold-semantics:
+  en: 6ae06e8044cafc24
+  zh: 6d24c3da9d42b8b7
+/deepseek-ai-dsh-session-usage/understand-the-implementation/source-map:
+  en: bea8621e2b9ce2b5
+  zh: d93be054afa8051f
+/deepseek-ai-dsh-session-usage/further-exploration:
+  en: 06e40495463facd3
+  zh: 61f566981ca889f6
+/deepseek-ai-dsh-session-usage/model-experience:
+  en: 7da9ab3b5a2c2be7
+  zh: 25963b668cf9b986
+/deepseek-ai-dsh-session-usage/model-experience/kv-cache-effect:
+  en: eeffeaba38d9202f
+  zh: 6934bac2dcd48b93
+/deepseek-ai-dsh-session-usage/known-limitations-and-deferred-work:
+  en: 6764d7060975b807
+  zh: 8dbdb375e6caffe6
+/deepseek-ai-dsh-session-usage/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

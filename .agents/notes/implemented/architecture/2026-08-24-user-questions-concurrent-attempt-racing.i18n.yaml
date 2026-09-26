@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-24-user-questions-concurrent-attempt-racing.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-24-user-questions-concurrent-attempt-racing.md
-2026-08-24-user-questions-concurrent-attempt-racing.md: 10f575a75112bedb93f2b7ac2d6f38b80a7d4cf0
-2026-08-24-user-questions-concurrent-attempt-racing.zh.md: 3fbf0712058c655e4ed46c483d0b139c35ecfc65
+/agent-note-user-questions-concurrent-attempt-racing:
+  en: 2935e78cfa229cd6
+  zh: d90334bd7bf8d0e2
+/agent-note-user-questions-concurrent-attempt-racing/problem:
+  en: 531602881d0188d6
+  zh: f07afb65f30fd835
+/agent-note-user-questions-concurrent-attempt-racing/decision:
+  en: 47c968573c2143f3
+  zh: d73ae38a9e23e492
+/agent-note-user-questions-concurrent-attempt-racing/alternatives-considered:
+  en: d681eedf374e30ea
+  zh: 3c80efd37de5383e
+/agent-note-user-questions-concurrent-attempt-racing/consequences:
+  en: c9ddad4b0247cadd
+  zh: 359d0bf0552ec62a
