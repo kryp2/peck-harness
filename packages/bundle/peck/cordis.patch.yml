@@ -23,12 +23,10 @@
 # ── product rows ────────────────────────────────────────────────────────────
 
 # The deployment default preset becomes the Peck agent composition (persona,
-# standard toolset, opt-in Peck packages). Requires the matching shipped
-# preset directory from the same distribution:
-# apps/cli/config/agent-presets/peck. A default no root supplies fails loud at
-# the first session resolution, which is the intended missing-distribution
-# signal.
-- id: agent-presets
+# standard toolset, opt-in Peck packages), declared by this bundle's
+# presets/peck.patch.yml. A default no declaration supplies fails loud at the
+# first session resolution, which is the intended missing-distribution signal.
+- id: agent-preset-registry
   config:
     default: peck
 
@@ -46,6 +44,6 @@
 
 # Opt-in Peck host packages are NOT composed here. Their dependency
 # declarations ride in this bundle's manifest so bare rows resolve from the
-# profile module fallback, but the composition choice belongs to an agent
-# preset (apps/cli/config/agent-presets/peck), where each stays disabled until
-# a deployment enables it.
+# profile module fallback, but the composition choice belongs to the Peck
+# agent preset (presets/peck.patch.yml), where each stays disabled until a
+# deployment enables it.

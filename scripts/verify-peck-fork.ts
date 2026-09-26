@@ -114,12 +114,10 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
   },
   {
     id: 'peck-composition',
-    title: 'Peck composition layer (product bundle, removed brand package, agent preset)',
+    title: 'Peck composition layer (product bundle and its agent preset declaration)',
     owner: 'peck',
     patterns: [
-      'apps/cli/config/agent-presets/peck/**',
       'packages/bundle/peck/**',
-      'packages/client/ui-brand-peck/**',
     ],
     retirement: 'Wholly peck-owned path space: the product composition lives here so the generic presets, bundles, and brand packages stay upstream-neutral. Offered upstream only if upstream adopts a product-composition seam.',
   },
@@ -128,6 +126,8 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Feature work on upstream-shared packages',
     owner: 'upstream-shared',
     patterns: [
+      'packages/boot/app-boot/src/index.ts',
+      'packages/boot/app-boot/tests/app-boot.spec.ts',
       'packages/core/agent/**',
       'packages/core/agent-loop/src/inbox.ts',
       'packages/core/agent-loop/tests/inbox.spec.ts',
@@ -150,7 +150,6 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Fork naming and visual identity',
     owner: 'upstream-shared',
     patterns: [
-      'apps/cli/config/agent-presets/cordis/agent.cordis.yml',
       'apps/web/index.html',
       'apps/web/public/**',
       'apps/web/tests/**',

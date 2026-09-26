@@ -27,9 +27,9 @@ Add this layer to a web-app profile and the surface becomes Peck Harness: the of
 
 ### Install into a profile
 
-To add the Peck product layer to a web-app profile, name `@deepseek-ai/dsh-peck` as a later bundle; in-box bundles resolve from the dsh installation. To remove it, drop the bundle and the profile returns to the upstream-neutral surface. Everything Peck-branded composes here: [`cordis.patch.yml`](cordis.patch.yml) rides over [`dsh-web-app`](../web-app/README.md) as a later profile layer, disabling the `ui-brand-official` row, pointing the deployment default agent preset at the shipped `peck` preset, and overriding the `web-runtime` row to add `productName: Peck Harness` (restating every web-app key, because a patch replaces a whole config). There is no Peck brand package by design: the product identity rides the preset default and the product name, not slot occupants.
+To add the Peck product layer to a web-app profile, name `@deepseek-ai/dsh-peck` as a later bundle; in-box bundles resolve from the dsh installation. To remove it, drop the bundle and the profile returns to the upstream-neutral surface. Everything Peck-branded composes here: [`cordis.patch.yml`](cordis.patch.yml) rides over [`dsh-web-app`](../web-app/README.md) as a later profile layer, disabling the `ui-brand-official` row, pointing the deployment default agent preset at the `peck` preset that [`presets/peck.patch.yml`](presets/peck.patch.yml) declares, and overriding the `web-runtime` row to add `productName: Peck Harness` (restating every web-app key, because a patch replaces a whole config). There is no Peck brand package by design: the product identity rides the preset default and the product name, not slot occupants.
 
-The manifest also declares `@deepseek-ai/dsh-telegram-answerer` as a dependency. That is resolution, not composition: opt-in Peck host packages must resolve for bare preset rows through the profile module fallback, while the choice to run them belongs to an agent preset (`apps/cli/config/agent-presets/peck`, disabled by default there). The bundle itself mounts no Peck behavior beyond the preset default and product naming; wallet, metered routing, and receipt packages stay uncomposed everywhere until their own acceptance gates pass.
+The manifest also declares `@deepseek-ai/dsh-telegram-answerer` as a dependency. That is resolution, not composition: opt-in Peck host packages must resolve for bare preset rows through the profile module fallback, while the choice to run them belongs to the `peck` agent preset ([`presets/peck.patch.yml`](presets/peck.patch.yml), disabled by default there). The bundle itself mounts no Peck behavior beyond the preset default and product naming; wallet, metered routing, and receipt packages stay uncomposed everywhere until their own acceptance gates pass.
 
 -----
 
@@ -46,9 +46,10 @@ The bundle is a static patch document: one `insert` list applied over the web-ap
 | File | Role |
 |---|---|
 | [`cordis.patch.yml`](cordis.patch.yml) | The bundle substance: brand-off, preset default, and product-name rows, with per-row rationale as inline comments |
+| [`presets/peck.patch.yml`](presets/peck.patch.yml) | The `peck` agent preset declaration: the shipped `standard` plugin list plus the Peck persona and the disabled opt-in rows |
 | [`src/index.ts`](src/index.ts) | Package entry; carries no runtime API |
 | — | No runtime invariant companion is published; the package is a static patch-list carrier (a YAML document of loader rows owned by other packages); it mounts no service, emits no events, and owns no mutable relation to check. Each inserted row's own package carries that row's invariants. |
-| [`tests/peck.spec.ts`](tests/peck.spec.ts) | Manifest declaration, patch-row checks, and loader-level composition proof (brand off, product rows, no active Peck package rows) |
+| [`tests/peck.spec.ts`](tests/peck.spec.ts) | Manifest declaration, patch-row checks, the preset-tracks-standard check, and loader-level composition proof (brand off, product rows, preset row, no active Peck package rows) |
 
 ### Invariant ownership
 
@@ -84,7 +85,7 @@ The preset's persona sits at the system prompt head and is stable per mounted pr
 
 These limits tell you when the layer needs extra care or where an override must go. They are current package constraints, not a general comparison or a task backlog.
 
-- **Requires its matching preset** — `default: peck` fails loud at the first session when the distribution did not ship `apps/cli/config/agent-presets/peck`; that failure is the intended missing-distribution signal.
+- **Tracks the shipped `standard` preset** — the `peck` declaration restates `standard`'s plugin list with only the Peck persona and the disabled opt-in rows added, so every upstream sync must carry `standard`'s changes across; the bundle spec fails until it does.
 - **Brand is one occupant set** — re-enabling `ui-brand-official` in an overlay above this layer takes dropping this layer's disable row; Peck ships no brand package of its own to conflict with.
 - **Shell identity stays generic** — the browser tab title, favicon, and PWA manifest remain build-time artifacts of `apps/web`, not runtime composition; a future distribution build profile owns them.
 - **No keyless assembled-output snapshot yet** — the shipped `apps/web` snapshot scenarios boot the default profile, so they never see this bundle's product rows; recording a peck-composed scenario needs a keyed snapshot run the integration owner has not spent yet. The bundle suite pins the composition through the real loader until then.

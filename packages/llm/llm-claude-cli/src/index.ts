@@ -1,7 +1,7 @@
 /**
  * Register a {@link ClaudeCliAdapter} for the `claude-cli` provider route on
- * `ctx.llm`. The plugin layers its `cordis.yml` entry config under the
- * `llm-claude-cli` user-settings section and requires no API key — Claude
+ * `ctx.llm`. The plugin reads its profile entry config (edited through the
+ * profile form, applied by Loader remount) and requires no API key — Claude
  * Code uses the host's own OAuth subscription, so authentication is the
  * user's, not the harness's.
  *
@@ -124,12 +124,10 @@ export function apply(ctx: Context, config: Config): void {
   // Validate at composition load (fail loud).
   const initial = resolveAdapterOptions(config)
 
-  // Per-call resolution; settings-snapshot swaps flow through here. The
-  // adapter sees a `() => ResolvedClaudeCliOptions` thunk; we resolve the
-  // raw `() => Config` snapshot from settings into the adapter's resolved
-  // shape on each call so a stale cache and a fresh source never mix.
-  let currentSource: () => Config = () => config
-  const options = (): ResolvedClaudeCliOptions => resolveAdapterOptions(currentSource())
+  // Per-call resolution: the adapter sees a `() => ResolvedClaudeCliOptions`
+  // thunk. Profile edits reach this plugin through the Loader, which remounts
+  // it with the new Config, so the thunk closes over this mount's config.
+  const options = (): ResolvedClaudeCliOptions => resolveAdapterOptions(config)
 
   // The adapter is process-stable; only its connection thunk is per-call.
   const adapterOptions: ClaudeCliAdapterOptions = { options }
@@ -141,18 +139,6 @@ export function apply(ctx: Context, config: Config): void {
   // The adapter handles one provider route. A future multi-route split (e.g.
   // `claude-cli-bedrock`) would re-register here on route changes.
   ctx.llm.registerAdapter([PROVIDER], adapter)
-
-  ctx.inject(['settings'], (settingsCtx) => {
-    settingsCtx.settings.installSection(ctx, NS, Config, config, {
-      setSource: (source: () => Config) => {
-        currentSource = source
-      },
-      onChange: () => {
-        // Re-validation on settings change happens through `options()` above;
-        // the adapter instance does not need re-registration.
-      },
-    })
-  })
 
   // Surface the resolved config once at mount so deployments can see the
   // effective binary path and settings JSON.

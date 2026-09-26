@@ -25,7 +25,7 @@ describe('CI workflow', () => {
     expect(steps[preparation]).not.toHaveProperty('continue-on-error', true)
   })
 
-  it.each(['ci.yml', 'ci-master.yml', 'e2e.yml', 'release.yml', 'release-vendor.yml'])(
+  it.each(['ci.yml', 'ci-master.yml', 'release.yml', 'release-vendor.yml'])(
     '%s cancels superseded validation runs without crossing workflow or ref boundaries', (name) => {
       const workflow = loadWorkflow('.github/workflows/' + name)
       expect(workflow.concurrency).toEqual({
@@ -34,6 +34,16 @@ describe('CI workflow', () => {
       })
     },
   )
+
+  it('lets every dispatched e2e run complete (fork: dispatch-only, no superseding trigger)', () => {
+    // FORK POLICY (fork CI trigger budget, 2026-08-22): e2e.yml spends real
+    // DeepSeek credits and runs only on manual dispatch, so no automatic run
+    // exists to supersede and a second dispatch must not cancel the first.
+    const workflow = loadWorkflow('.github/workflows/e2e.yml')
+    expect(workflow.concurrency).toBeUndefined()
+    if (!isRecord(workflow.on)) throw new TypeError('e2e workflow must define events')
+    expect(Object.keys(workflow.on)).toEqual(['workflow_dispatch'])
+  })
 
   it('cancels reusable CI builds without cancelling release-owned builds', () => {
     const workflow = loadWorkflow('.github/workflows/build-exe-for-python-sdk.yml')
@@ -377,10 +387,13 @@ describe('CI workflow', () => {
         github: { event: { pull_request: { user: { login } } } },
       })
     }
+    // FORK POLICY (deepseek-harness PR #12, owner decision 2026-08-24): the
+    // hosted fallbacks are GitHub's own runners; the upstream dsh-* enterprise
+    // pools are not operated on this fork.
     for (const [name, selector, variable, pool, hosted] of [
-      ['linux gates', selectors.linux, 'DSH_CI_FAILOVER_LINUX', ['self-hosted', 'linux', 'x64', 'vm-backup'], 'dsh-ubuntu-24-04-16core'],
+      ['linux gates', selectors.linux, 'DSH_CI_FAILOVER_LINUX', ['self-hosted', 'linux', 'x64', 'vm-backup'], 'ubuntu-latest'],
       ['linux aggregate', selectors.linuxAggregate, 'DSH_CI_FAILOVER_LINUX', ['self-hosted', 'linux', 'x64', 'vm-backup'], 'ubuntu-latest'],
-      ['windows lanes', selectors.windows, 'DSH_CI_FAILOVER_WINDOWS', ['self-hosted', 'dsh-win-ci', 'windows'], 'dsh-windows-2025-16core'],
+      ['windows lanes', selectors.windows, 'DSH_CI_FAILOVER_WINDOWS', ['self-hosted', 'dsh-win-ci', 'windows'], 'windows-latest'],
     ] as const) {
       expect(evaluate(selector, { [variable]: 'blacksmith' }), `${name} blacksmith value`).toMatch(/^blacksmith-/)
       expect(evaluate(selector, { [variable]: 'selfhosted' }), `${name} selfhosted value`).toEqual(pool)

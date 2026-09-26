@@ -143,12 +143,11 @@ describe('buildInvocation: stdin transcript', () => {
     expect(inv.stdin).not.toContain('AVAILABLE TOOLS')
   })
 
-  it('renders tool-result blocks with id + optional error tag', () => {
+  it('renders tool-role messages with id + optional error tag', () => {
     const msg = {
-      id: 'm1', role: 'user', source: undefined,
-      content: [
-        { type: 'tool-result', toolCallId: 'call-1', content: [{ type: 'text', text: 'result data' }], isError: true },
-      ],
+      id: 'm1', role: 'tool', source: { kind: 'tool', callId: 'call-1' },
+      toolCallId: 'call-1', isError: true,
+      content: [{ type: 'text', text: 'result data' }],
     } as unknown as Message
     const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
     expect(inv.stdin).toContain('[tool]')
@@ -168,13 +167,14 @@ describe('buildInvocation: model alias resolution', () => {
 })
 
 describe('buildInvocation: stdin transcript block rendering', () => {
-  it('labels a message whose source kind is tool with [tool]', () => {
+  it('labels a tool-role message with [tool] and wraps its result', () => {
     const msg = {
-      id: 'm1', role: 'user', source: { kind: 'tool', callId: 'call-1' },
+      id: 'm1', role: 'tool', source: { kind: 'tool', callId: 'call-1' },
+      toolCallId: 'call-1',
       content: [{ type: 'text', text: 'result payload' }],
     } as unknown as Message
     const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
-    expect(inv.stdin).toContain('[tool]\nresult payload')
+    expect(inv.stdin).toContain('[tool]\n<tool_result id="call-1">\nresult payload\n</tool_result>')
   })
 
   it('treats a message without content blocks as an empty user turn', () => {
@@ -218,17 +218,14 @@ describe('buildInvocation: stdin transcript block rendering', () => {
 
   it('renders non-text tool-result parts as bracketed placeholders and omits the error tag when absent', () => {
     const msg = {
-      id: 'm1', role: 'user', source: undefined,
-      content: [{
-        type: 'tool-result',
-        toolCallId: 'call-2',
-        content: [{ type: 'text', text: 'partial ' }, { type: 'image', attachment: {} }],
-      }],
+      id: 'm1', role: 'tool', source: { kind: 'tool', callId: 'call-2' },
+      toolCallId: 'call-2',
+      content: [{ type: 'text', text: 'partial ' }, { type: 'image', attachment: {} }],
     } as unknown as Message
     const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
     expect(inv.stdin).toContain('<tool_result id="call-2">')
     expect(inv.stdin).not.toContain('[error]')
-    expect(inv.stdin).toContain('partial [image]')
+    expect(inv.stdin).toContain('partial \n[image attachment]')
   })
 })
 

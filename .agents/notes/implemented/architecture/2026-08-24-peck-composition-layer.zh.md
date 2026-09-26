@@ -12,7 +12,7 @@ Status: implemented
 
 产品身份只在两处组合，且两处均为新建；所有通用表层恢复到与上游逐字节一致的内容。
 
-**宿主侧：`peck` agent preset**（`apps/cli/config/agent-presets/peck/`）。它是随发行的 `standard` 工具集的完整副本，其 persona 行携带 Peck Harness 身份，另加一个可选 Peck 宿主包块——`telegram-answerer` 以禁用状态随行，部署删除 `disabled` 并提供凭据后启用。deployment-refusal guard 在任何地方都保持未组合（[它自己的 Agent Note](2026-08-24-deployment-refusal-guard.zh.md) 使其在评审通过前保持可选），计量回执/路由包在各自验收关卡通过之前保持未组合。通用的 `cordis` 与 `standard` preset 不携带任何 Peck 文本。
+**宿主侧：`peck` agent preset**（最初位于 `apps/cli/config/agent-presets/peck/`；自 dsh-v0.1.7-rc.2 上游同步起 preset 改为声明行，现位于 `packages/bundle/peck/presets/peck.patch.yml`）。它是随发行的 `standard` 工具集的完整副本，其 persona 行携带 Peck Harness 身份，另加一个可选 Peck 宿主包块——`telegram-answerer` 以禁用状态随行，部署删除 `disabled` 并提供凭据后启用。deployment-refusal guard 在任何地方都保持未组合（[它自己的 Agent Note](2026-08-24-deployment-refusal-guard.zh.md) 使其在评审通过前保持可选），计量回执/路由包在各自验收关卡通过之前保持未组合。通用的 `cordis` 与 `standard` preset 不携带任何 Peck 文本。
 
 **组合侧：`dsh-peck` bundle**（`packages/bundle/peck/`，与 `dsh-base` 同类的纯 patch 包）。其 patch 层叠加在 `dsh-web-app` 之上，做四件事：禁用 `ui-brand-official` 行，插入无条件的 Peck 品牌客户端包，用 `productName: Peck Harness` 覆盖 `web-runtime` 行（逐键复述 web-app 配置，因为 patch 替换整个 config），并把部署默认 preset 指向 `peck`。其 manifest 声明 `telegram-answerer` 为依赖，使 preset 中的裸行能经 profile module fallback 解析——这是解析而非组合；是否运行可选包的选择留在 preset 里。
 

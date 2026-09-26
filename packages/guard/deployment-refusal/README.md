@@ -25,7 +25,7 @@ A loopback-bound process says nothing about who can actually reach it: an extern
 <a id="use-this-package"></a>
 ## Use this package
 
-The common path is one row mounted early in the composition — before server/readiness rows — so a refusal aborts boot before anything announces readiness. A deployment with no remote bridging declares nothing: the defaults describe a loopback-only socket and the guard passes without reading the permission owner.
+The common path is one row mounted early in the composition — before server/readiness rows — so a refusal aborts boot before anything announces readiness. Keep the row id `deployment-refusal`: DSH's startup audit only rejects boot for entry ids on its required list, and the fork lists this id there — under any other id a refusal would be downgraded to a startup warning. A deployment with no remote bridging declares nothing: the defaults describe a loopback-only socket and the guard passes without reading the permission owner.
 
 ### When to choose it
 

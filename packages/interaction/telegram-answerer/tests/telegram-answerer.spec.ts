@@ -136,11 +136,12 @@ function shell(
         sandboxPolicy: request.sandboxPolicy,
       }
     },
-    async run(spec: ShellExecSpec): Promise<ShellRunResult> {
+    async execute(spec: ShellExecSpec): Promise<{ result(): Promise<ShellRunResult> }> {
       specs.push(spec)
       const kind = kindOf(spec)
       if (kind === 'poll') polls += 1
-      return await run(kind, spec, polls)
+      const settled = run(kind, spec, polls)
+      return { result: async () => await settled }
     },
   } as unknown as ShellExecutor
   return { executor, specs }

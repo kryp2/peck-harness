@@ -27,7 +27,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-当组合通过本地安装的 Claude Code CLI 运行 Claude 模型时挂载本插件。它注册唯一的 `claude-cli` 路由，并按请求解析连接事实，因此一个组合条目加可选的用户 settings 区块即可驱动整个适配器。
+当组合通过本地安装的 Claude Code CLI 运行 Claude 模型时挂载本插件。它注册唯一的 `claude-cli` 路由，并按请求解析连接事实，因此它的 profile 条目即可驱动整个适配器。
 
 ### 何时选用
 
@@ -109,13 +109,13 @@ StreamChunk[]   { block-start, text-delta, block-end, usage, finish }
 
 ### 设计概念
 
-桥接把 `GenerateOptions` 收敛为一次 `claude --print` 调用，再把返回的 JSON 文档解析回 harness `StreamChunk`。`resolveAdapterOptions()` 是从原始配置到已验证连接事实的唯一显式 resolve 步骤，适配器通过 `llm-claude-cli` settings 区块按请求重读这些事实，因此编辑用户 settings 文档无需重启即可影响下一次请求。
+桥接把 `GenerateOptions` 收敛为一次 `claude --print` 调用，再把返回的 JSON 文档解析回 harness `StreamChunk`。`resolveAdapterOptions()` 是从原始配置到已验证连接事实的唯一显式 resolve 步骤，适配器按请求从已挂载的配置解析这些事实。profile 表单的修改经由 Loader 到达适配器，Loader 会用新配置重新挂载本插件。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、按请求解析、settings 接线 |
+| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、按请求解析 |
 | [`src/adapter.ts`](src/adapter.ts) | `ClaudeCliAdapter`：调用构造、子进程执行、空闲超时 |
 | [`src/serialize.ts`](src/serialize.ts) | 线上序列化：transcript 角色、`--system-prompt` 组装、目录类型 |
 | [`src/translate.ts`](src/translate.ts) | JSON result 翻译为 harness `StreamChunk` 值；围栏 JSON 工具调用检测 |

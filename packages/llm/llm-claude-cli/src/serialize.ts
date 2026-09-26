@@ -12,7 +12,7 @@
  * @module dsh-llm-claude-cli/serialize
  */
 
-import type { ContentBlock, GenerateOptions, Message, ToolSchema } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, GenerateOptions, RequestMessage, ToolSchema } from '@deepseek-ai/dsh-llm'
 
 /**
  * Validated connection facts for one operation. Plugin config is the one
@@ -136,7 +136,7 @@ function clampSystem(system: string, maxChars: number): { text: string; truncate
  * Tool-result messages are flattened to JSON; assistant messages are quoted
  * verbatim so the model sees the prior turn exactly as it produced it.
  */
-function serializeMessages(messages: readonly Message[], tools: readonly ToolSchema[] | undefined): string {
+function serializeMessages(messages: readonly RequestMessage[], tools: readonly ToolSchema[] | undefined): string {
   const sections: string[] = []
   if (tools !== undefined && tools.length > 0) {
     sections.push('--- AVAILABLE TOOLS (DSH will execute these for you; emit JSON like `{"tool":"name","arguments":{...}}` only if you must call one) ---')
@@ -151,28 +151,31 @@ function serializeMessages(messages: readonly Message[], tools: readonly ToolSch
   return sections.join('\n\n').trimEnd() + '\n'
 }
 
-function serializeOne(msg: Message): string {
+function serializeOne(msg: RequestMessage): string {
   const role = roleLabel(msg)
-  // roleLabel already tolerates nullish content because durable log data
-  // carries the key nullish more often than the type admits; render the
-  // empty turn too instead of crashing after the label survived.
-  const body = renderContent((msg as { content?: readonly ContentBlock[] }).content ?? [])
-  return `[${role}]\n${body}`
+  // Durable log data carries `content` nullish more often than the type
+  // admits; render the empty turn instead of crashing after the label.
+  const blocks = (msg as { content?: readonly ContentBlock[] }).content ?? []
+  if (msg.role === 'tool') {
+    // Tool results are first-class tool-role messages: the call id and error
+    // flag live on the message, the result body in its content blocks.
+    const err = msg.isError === true ? ' [error]' : ''
+    return `[${role}]\n<tool_result id="${msg.toolCallId}"${err}>\n${renderContent(blocks)}\n</tool_result>`
+  }
+  return `[${role}]\n${renderContent(blocks)}`
 }
 
-function roleLabel(msg: Message): string {
-  // `source.kind === 'model'` is assistant; everything else is user/tool-result.
-  // The cast admits undefined: durable log data carries the key with a nullish
-  // value more often than the type admits.
-  const src = (msg as { source?: { kind?: string } }).source
-  if (src !== undefined) {
-    if (src.kind === 'model') return 'assistant'
-    if (src.kind === 'tool') return 'tool'
+function roleLabel(msg: RequestMessage): string {
+  switch (msg.role) {
+    case 'assistant':
+      return 'assistant'
+    case 'tool':
+      return 'tool'
+    default:
+      // System, developer, and user turns all reach Claude Code as user-side
+      // context; the system prompt itself travels on --system-prompt.
+      return 'user'
   }
-  // Fallback: discriminate by presence of tool-result blocks.
-  const blocks = (msg as { content?: readonly ContentBlock[] }).content ?? []
-  if (blocks.some(b => b.type === 'tool-result')) return 'tool'
-  return 'user'
 }
 
 function renderContent(blocks: readonly ContentBlock[]): string {
@@ -195,12 +198,9 @@ function renderContent(blocks: readonly ContentBlock[]): string {
       case 'tool-call':
         parts.push(`<tool_use id="${block.id}" name="${block.name}">\n${block.arguments}\n</tool_use>`)
         break
-      case 'tool-result': {
-        const content = block.content.map(c => c.type === 'text' ? c.text : `[${c.type}]`).join('')
-        const err = block.isError === true ? ' [error]' : ''
-        parts.push(`<tool_result id="${block.toolCallId}"${err}>\n${content}\n</tool_result>`)
+      case 'file':
+        parts.push('[file attachment]')
         break
-      }
     }
   }
   return parts.join('\n')

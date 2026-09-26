@@ -27,9 +27,9 @@ kind: "package-bundle"
 
 ### 安装到 profile
 
-要把 Peck 产品层加到 web-app profile，把 `@deepseek-ai/dsh-peck` 命名为靠后的 bundle；内置 bundle 从 dsh 安装中解析。要移除它，去掉该 bundle 即可，profile 回到上游中性表层。所有 Peck 品牌内容都在这里组合：[`cordis.patch.yml`](cordis.patch.yml) 作为更晚的 profile 层叠加在 [`dsh-web-app`](../web-app/README.zh.md) 之上，禁用 `ui-brand-official` 行，把部署默认 agent preset 指向随发行附带的 `peck` preset，并覆盖 `web-runtime` 行加入 `productName: Peck Harness`（逐键复述 web-app 的配置，因为 patch 替换整个 config）。设计上不存在 Peck 品牌包：产品身份由 preset 默认与产品名称承载，而非 slot 占位者。
+要把 Peck 产品层加到 web-app profile，把 `@deepseek-ai/dsh-peck` 命名为靠后的 bundle；内置 bundle 从 dsh 安装中解析。要移除它，去掉该 bundle 即可，profile 回到上游中性表层。所有 Peck 品牌内容都在这里组合：[`cordis.patch.yml`](cordis.patch.yml) 作为更晚的 profile 层叠加在 [`dsh-web-app`](../web-app/README.zh.md) 之上，禁用 `ui-brand-official` 行，把部署默认 agent preset 指向 [`presets/peck.patch.yml`](presets/peck.patch.yml) 声明的 `peck` preset，并覆盖 `web-runtime` 行加入 `productName: Peck Harness`（逐键复述 web-app 的配置，因为 patch 替换整个 config）。设计上不存在 Peck 品牌包：产品身份由 preset 默认与产品名称承载，而非 slot 占位者。
 
-manifest 还声明了 `@deepseek-ai/dsh-telegram-answerer` 依赖。这是解析而非组合：可选的 Peck 宿主包必须能被 preset 中的裸行经 profile module fallback 解析到，而是否运行它们属于 agent preset 的选择（`apps/cli/config/agent-presets/peck`，在其中默认禁用）。除 preset 默认与产品命名外，本组合包自身不挂载任何 Peck 行为；钱包、计量路由与回执包在各自的验收关卡通过之前处处保持未组合。
+manifest 还声明了 `@deepseek-ai/dsh-telegram-answerer` 依赖。这是解析而非组合：可选的 Peck 宿主包必须能被 preset 中的裸行经 profile module fallback 解析到，而是否运行它们属于 `peck` agent preset 的选择（[`presets/peck.patch.yml`](presets/peck.patch.yml)，在其中默认禁用）。除 preset 默认与产品命名外，本组合包自身不挂载任何 Peck 行为；钱包、计量路由与回执包在各自的验收关卡通过之前处处保持未组合。
 
 -----
 
@@ -46,9 +46,10 @@ manifest 还声明了 `@deepseek-ai/dsh-telegram-answerer` 依赖。这是解析
 | 文件 | 职责 |
 |---|---|
 | [`cordis.patch.yml`](cordis.patch.yml) | 本包实质：品牌替换、preset 默认与产品命名行，逐行附注理由 |
+| [`presets/peck.patch.yml`](presets/peck.patch.yml) | `peck` agent preset 声明：随发行的 `standard` 插件列表，外加 Peck persona 与默认禁用的可选行 |
 | [`src/index.ts`](src/index.ts) | 包入口；不带运行时 API |
 | — | 不发布运行时不变量伴随件；本包是静态 patch-list 载体（loader 行的 YAML 文档，行归其他包所有）；不挂载服务、不发射事件、不拥有可检查的可变关系。每行自身包携带该行的不变量。 |
-| [`tests/peck.spec.ts`](tests/peck.spec.ts) | manifest 声明与 patch 行检查（品牌替换、产品命名行、无启用的 Peck 包行） |
+| [`tests/peck.spec.ts`](tests/peck.spec.ts) | manifest 声明、patch 行检查、preset 跟随 standard 的检查，以及 loader 级组合证明（品牌替换、产品命名行、preset 行、无启用的 Peck 包行） |
 
 ### 不变量归属
 
@@ -84,7 +85,7 @@ preset 的 persona 位于系统提示词开头，且对每个已挂载 preset �
 
 这些限制说明本层何时需要额外注意、覆盖应写在哪里。它们是当前包约束，不是泛泛比较或任务积压。
 
-- **依赖配套 preset**：发行未附带 `apps/cli/config/agent-presets/peck` 时，`default: peck` 会在第一个会话明确报错；该失败即缺失发行的预期信号。
+- **跟随随发行的 `standard` preset**：`peck` 声明重述 `standard` 的插件列表，只额外加入 Peck persona 与默认禁用的可选行，因此每次上游同步都必须把 `standard` 的变化带过来；在此之前组合包的测试会失败。
 - **品牌是一组占位者**：要在本层之上的 overlay 里重新启用 `ui-brand-official`，去掉本层的禁用行即可；Peck 没有自己的品牌包与之冲突。
 - **Shell 身份保持通用**：浏览器标签标题、favicon 与 PWA manifest 仍是 `apps/web` 的构建时产物，不是运行时组合；未来的分发构建 profile 拥有它们。
 - **尚无 keyless 组装输出快照**：随发行的 `apps/web` 快照场景启动默认 profile，见不到本包品牌；录制 peck 组合场景需要一次集成负责人尚未花费的 keyed 快照运行。在此之前由包级套件固定各部件（slot 填充、调色板层、patch 行）。

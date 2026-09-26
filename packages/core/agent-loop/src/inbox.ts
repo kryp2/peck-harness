@@ -59,7 +59,7 @@ function repairPersistedEntry(entry: PersistedInboxEntry, seq: number, index: nu
     id: `legacy-inbox-${String(seq)}-${String(index)}` as MessageId,
     role: 'user',
     content: [{ type: 'text', text }],
-    source: { kind: 'plugin', plugin: 'legacy-inbox-entry' },
+    source: { kind: 'user' },
   }
 }
 

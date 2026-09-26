@@ -27,7 +27,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount this plugin when a composition runs Claude models through a locally-installed Claude Code CLI. It registers the single `claude-cli` route and resolves connection facts per request, so a composition entry plus an optional user settings section drive the whole adapter.
+Mount this plugin when a composition runs Claude models through a locally-installed Claude Code CLI. It registers the single `claude-cli` route and resolves connection facts per request, so its profile entry drives the whole adapter.
 
 ### When to choose it
 
@@ -109,13 +109,13 @@ This section explains the request/response translation behind the adapter; the o
 
 ### Design concept
 
-The bridge collapses `GenerateOptions` to one `claude --print` call and parses the resulting JSON document back into harness `StreamChunk`s. `resolveAdapterOptions()` is the single explicit resolve step from raw config to validated connection facts, and the adapter re-reads those facts per request through the `llm-claude-cli` settings section, so editing the user settings document changes the next request without a restart.
+The bridge collapses `GenerateOptions` to one `claude --print` call and parses the resulting JSON document back into harness `StreamChunk`s. `resolveAdapterOptions()` is the single explicit resolve step from raw config to validated connection facts, and the adapter resolves those facts per request from its mounted config. A profile-form edit reaches the adapter through the Loader, which remounts the plugin with the new config.
 
 ### Source map
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, per-request resolution, settings wiring |
+| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, per-request resolution |
 | [`src/adapter.ts`](src/adapter.ts) | The `ClaudeCliAdapter`: invocation building, subprocess execution, idle timeout |
 | [`src/serialize.ts`](src/serialize.ts) | Wire serialization: transcript roles, `--system-prompt` assembly, catalog types |
 | [`src/translate.ts`](src/translate.ts) | JSON result translation into harness `StreamChunk` values; fenced-JSON tool-call detection |

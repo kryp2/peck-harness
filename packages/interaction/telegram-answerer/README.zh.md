@@ -89,7 +89,7 @@ kind: "package-reference"
 当某个提问无人认领，或竞速行为不符合预期时阅读这些页面。它们从能力层契约走向展示它的预设与工具。
 
 - [user-questions 能力层](../user-questions/README.zh.md) — 回答者注册的竞速通道与 fail-closed 语义。
-- [peck 预设](../../../apps/cli/config/agent-presets/peck) — 默认禁用本包的 bare 行。
+- [peck 预设](../../bundle/peck/presets/peck.patch.yml) — 默认禁用本包的 bare 行。
 - [dsh-tool-ask-user](../tool-ask-user/README.zh.md) — 拥有问题流程模型可见面的工具。
 
 -----

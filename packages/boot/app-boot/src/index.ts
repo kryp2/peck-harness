@@ -751,6 +751,10 @@ const requiredStartupEntryIds = new Set<string>([
   'headless-runner',
   'acp',
   'sdk-jsonrpc-server',
+  // Peck fork: the deployment-refusal guard exists to stop the boot before
+  // readiness; as an optional entry its refusal would only warn and the
+  // remote danger-full-access surface would start anyway.
+  'deployment-refusal',
 ])
 
 /** Render plugin stacks, nested causes, and aggregate member failures once per error. */
