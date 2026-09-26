@@ -129,7 +129,7 @@ function shell(
     resolve(request: ShellExecRequest): ShellExecSpec {
       return {
         command: request.command, workdir: request.workdir ?? '/stub',
-        timeoutMs: request.timeoutMs ?? 0, stdoutMaxBytes: request.stdoutMaxBytes ?? 64_000,
+        timeoutMs: request.timeoutMs ?? 0, stdoutMaxBytes: request.stdoutMaxBytes ?? 64_000, onExpiry: 'kill',
         ...request.signal ? { signal: request.signal } : {},
         ...request.stdin !== undefined ? { stdin: request.stdin } : {},
         ...request.env !== undefined ? { env: request.env } : {},

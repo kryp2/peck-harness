@@ -1,0 +1,181 @@
+{
+  "formatVersion": 2,
+  "roots": [
+    {
+      "key": "event:peck/metered-receipt",
+      "kind": "event",
+      "event": "peck/metered-receipt",
+      "surface": false,
+      "digest": "ca3d456b6414950bcc2e0bf19b81ef7225dd1495cce3bcf6bc7046f43a040dc5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 6,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 7,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "amountSpentNewSats",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "catalogHash",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "channelOutpoint",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "channelSequence",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "chargeSats",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "clientSignature",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "gatewaySignature",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "priceScheduleId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "requestId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "responseHash",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "routeId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "timestampMs",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "upstreamModelId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "usage",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "version",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "cacheReadTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "cacheWriteTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "inputTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "outputTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "reasoningTokens",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "literal",
+            "value": "peck/v1/inference-receipt"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "peck/metered-receipt"
+          }
+        ]
+      }
+    }
+  ],
+  "types": []
+}

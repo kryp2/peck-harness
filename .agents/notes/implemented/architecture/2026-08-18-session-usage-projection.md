@@ -24,7 +24,7 @@ Cost, external balances, and CLI-agent aggregation are deliberately out of scope
 
 **Extend `session-stats` instead of a new unit.** The existing unit's view is a flat wall-time/token summary; folding a route-keyed table into it would mix two different read shapes and force every existing consumer to grow. A separate `usageByRoute` key keeps each unit's schema self-contained and lets a dashboard consume usage without depending on wall-time fields.
 
-**Attribute usage by parsing the assistant message's own source.** The message source carries a provider/model, but it is the message's provenance metadata, not the request configuration, and the loop's authoritative route identity is the `request/header`/`request/context` config. Keying on the logged request config reproduces the pinned route and stays correct across replay.
+**Attribute usage by parsing the assistant message's own source.** The message source carries a provider/model, but it records which route produced that message, not the request configuration, and the loop's authoritative route identity is the `request/header`/`request/context` config. Keying on the logged request config reproduces the pinned route and stays correct across replay.
 
 **Embed a price table in the projection.** Prices are owner-curated, change on provider schedules, and differ per execution class; folding money into a schema-validated wire value would require re-recording the unit on every price change. Tokens are the durable measurement; cost is a later, separately-owned mapping.
 

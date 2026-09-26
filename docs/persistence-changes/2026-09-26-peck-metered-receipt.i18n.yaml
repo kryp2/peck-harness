@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-09-26-peck-metered-receipt.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-09-26-peck-metered-receipt.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-09-26-peck-metered-receipt:
+  en: 916a86fae8026abf
+  zh: 93ae15ec17b2a6cb
+/2026-09-26-peck-metered-receipt/summary:
+  en: 6880ec5e6a69a8a5
+  zh: c2dbc6b62532cdcd
+/2026-09-26-peck-metered-receipt/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-09-26-peck-metered-receipt/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-09-26-peck-metered-receipt/compatibility:
+  en: 9e374bd632e4a778
+  zh: 269a606eb3926c90
+/2026-09-26-peck-metered-receipt/verification:
+  en: 7c631e8b5c5d6556
+  zh: 6f8dcf072877d37f
+/2026-09-26-peck-metered-receipt/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

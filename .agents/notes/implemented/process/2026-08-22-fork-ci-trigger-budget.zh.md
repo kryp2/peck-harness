@@ -17,7 +17,7 @@ Status: implemented
 - `e2e.yml` 只保留 `workflow_dispatch` 并移除了每夜 schedule。它除分钟数外还消耗真实 API 额度；当被测对象是 provider 行为时由维护者手动 dispatch。
 - `scripts/ci-workflow.spec.ts` 钉住上述每一个形状，以及 `e2e.yml` 与 `sandbox.yml` 的仅手动状态，使日后的工作流编辑无法悄悄重新引入自动花费。
 
-同一个 PR 还修复了既有漂移：提交 `e76268ce7e` 删除了 `issue-lifecycle.yml` 与 `issue-policy.yml` 却留下了它们的断言，导致该 spec 自那时起在 master 上一直失败。
+同一个 PR 还修复了既有漂移：一个较早的上游提交删除了 `issue-lifecycle.yml` 与 `issue-policy.yml` 却留下了它们的断言，导致该 spec 自那时起在 master 上一直失败。
 
 ## Consequences
 

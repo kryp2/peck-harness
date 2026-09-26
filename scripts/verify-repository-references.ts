@@ -12,7 +12,9 @@ const organizationUrl = new RegExp(`\\bgithub\\.com/${organization}(?![a-z0-9-])
 // The independent kit repository owns the engine source and documentation.
 const kitRepositoryUrl = new RegExp(`\\bgithub\\.com/${organization}/libreoffice-kit(?:\\.git)?(?=/|[^a-zA-Z0-9_.-]|$)`, 'g')
 const commitCandidate = /(?<![a-z0-9])[\da-f]{7,40}(?![a-z0-9])/gi
-const excludedPrefixes = ['vendor/', '.agents/notes/archived/']
+// Peck fork: the fork-divergence gate records its upstream merge-base as a
+// commit id by design, in the script and in the page that mirrors it.
+const excludedPrefixes = ['vendor/', '.agents/notes/archived/', 'scripts/verify-peck-fork.ts', 'docs/peck-fork.']
 const gitOutputLimit = 64 * 1024 * 1024
 
 /** One prohibited reference in a maintained source file. */
