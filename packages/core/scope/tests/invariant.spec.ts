@@ -85,6 +85,8 @@ describe('scoped-dispatch invariants', () => {
       ['tools/pre-execute', [{ callId: 'c', name: 't', arguments: {}, agent }, () => Promise.resolve({ kind: 'allow' })]],
       ['tools/result', [{ callId: 'c', name: 't', arguments: {}, agent }, { content: [], isError: false }]],
       ['user-questions/request', [{ agent, questions: [] }, () => Promise.resolve({ answers: [] })]],
+      // Peck fork: the racing event answerers register on beside the waterfall.
+      ['user-questions/ask', [{ agent, questions: [] }, signal]],
     ]
 
     for (const [event, args] of rows) {

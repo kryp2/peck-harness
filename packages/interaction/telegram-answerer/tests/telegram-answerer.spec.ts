@@ -559,6 +559,44 @@ describe('telegram-answerer wired answer path', () => {
     expect(answer).toEqual({ answers: [{ id: 'q', selected: ['A'] }] })
     expect(polls).toBe(2)
   })
+
+  it('skips updates it cannot attribute or that carry no text, then answers', async () => {
+    let polls = 0
+    const { ctx } = await wired(async (kind) => {
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      polls += 1
+      if (polls === 1) {
+        return shellResult({
+          stdout: {
+            text: JSON.stringify({
+              ok: true,
+              result: [
+                // No update_id and no sender at all: the cursor stays and the reply is unattributable.
+                { message: { text: 'from nowhere' } },
+                // Neither a callback nor a message (an edit): nothing to answer with.
+                { update_id: 7, edited_message: { chat: { id: Number(CHAT) }, text: 'edited' } },
+                // Authorized through `from` alone, but without text (a sticker).
+                { update_id: 8, message: { from: { id: Number(CHAT) }, sticker: {} } },
+              ],
+            }),
+            truncated: false,
+          },
+        })
+      }
+      return shellResult({
+        stdout: {
+          text: JSON.stringify({ ok: true, result: [{ update_id: 9, message: { from: { id: Number(CHAT) }, text: 'typed' } }] }),
+          truncated: false,
+        },
+      })
+    })
+
+    const answer = await ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Say something' }] })
+
+    expect(answer).toEqual({ answers: [{ id: 'q', selected: [], custom: 'typed' }] })
+    expect(polls).toBe(2)
+  })
 })
 
 describe('telegram-answerer under racing', () => {
@@ -606,6 +644,35 @@ describe('telegram-answerer under racing', () => {
     expect(body.message_id).toBe('100')
     expect(body.text).toContain('(answered elsewhere)')
     expectTokenOffArgv(specs)
+  })
+
+  it('ends a superseded attempt after a reply-less poll and swallows a failed answered-elsewhere edit', async () => {
+    const specs: ShellExecSpec[] = []
+    const { ctx } = await wired(async (kind, spec) => {
+      specs.push(spec)
+      if (kind === 'send') return shellResult({ stdout: { text: sendOk(100), truncated: false } })
+      if (kind === 'drain-probe') return shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })
+      // The edit fails: Telegram answers with something that is not JSON.
+      if (kind === 'edit') return shellResult({ stdout: { text: 'bad gateway', truncated: false } })
+      // The poll completes with a valid, empty batch once the attempt is superseded.
+      return await new Promise<ShellRunResult>((resolve) => {
+        const empty = (): void => { resolve(shellResult({ stdout: { text: JSON.stringify({ ok: true, result: [] }), truncated: false } })) }
+        spec.signal?.addEventListener('abort', empty, { once: true })
+      })
+    })
+    let claim!: () => void
+    const claimed = new Promise<void>((resolve) => { claim = resolve })
+    void ctx.on('user-questions/ask', () => claimed.then(() => ({ answers: [{ id: 'q', selected: ['Web'] }] })))
+
+    const asked = ctx.userQuestions.ask({ questions: [{ id: 'q', question: 'Pick', options: [{ label: 'A' }] }] })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    claim()
+
+    await expect(asked).resolves.toEqual({ answers: [{ id: 'q', selected: ['Web'] }] })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    // The edit was attempted and its failure stayed inside the loser cleanup.
+    expect(specs.filter(spec => kindOf(spec) === 'edit')).toHaveLength(1)
+    expect(specs.filter(spec => kindOf(spec) === 'poll')).toHaveLength(1)
   })
 
   it('stops polling on a caller abort but leaves the message untouched', async () => {

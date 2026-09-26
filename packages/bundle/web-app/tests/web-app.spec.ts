@@ -188,6 +188,25 @@ describe('web-app runtime glue', () => {
     await ctx.fiber.dispose()
   })
 
+  it('falls back to the default product name when a programmatic config omits it', async () => {
+    stageDist()
+    const ctx = new Context()
+    ctx.provide('webServer', fakeHttpServer().server)
+    const contributions: BashContribution[] = []
+    ctx.provide('shellEnv', {
+      register: (contribution: BashContribution) => {
+        contributions.push(contribution)
+        return () => {}
+      },
+    } as never)
+    // Bypasses the schema default on purpose: apply() owns the fallback itself.
+    apply(ctx, { openBrowser: false, printUrl: false, surfaceContext: true, trustedHosts: [] } as never)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const webRuntime = contributions.find(contribution => contribution.name === 'web-runtime')
+    expect(webRuntime?.variables.DSH_WEB_URL?.description).toBe('Canonical local URL of the DeepSeek Harness Web GUI serving this session.')
+    await ctx.fiber.dispose()
+  })
+
   it('fails loud on a blank product name instead of rendering "the  Web GUI"', () => {
     stageDist()
     const ctx = new Context()

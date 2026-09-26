@@ -185,6 +185,15 @@ describe('buildInvocation: stdin transcript block rendering', () => {
     expect(inv.stdin).toContain('[user]\n')
   })
 
+  it('renders a file block as a placeholder so the model sees the slot', () => {
+    const msg = {
+      id: 'm1', role: 'user', source: { kind: 'user' },
+      content: [{ type: 'text', text: 'see attached' }, { type: 'file', attachment: {} }],
+    } as never
+    const inv = buildInvocation(genOpts({ messages: [msg] }), conn())
+    expect(inv.stdin).toContain('[user]\nsee attached\n[file attachment]')
+  })
+
   it('wraps reasoning blocks in <thinking> tags so prior context survives', () => {
     const msg = {
       id: 'm1', role: 'assistant', source: { kind: 'model', provider: 'claude-cli', model: 'sonnet' },

@@ -133,6 +133,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'packages/core/agent/**',
       'packages/core/agent-loop/src/inbox.ts',
       'packages/core/agent-loop/tests/inbox.spec.ts',
+      'packages/core/scope/tests/invariant.spec.ts',
       'packages/core/session/src/known-event-types.ts',
       'packages/client/ui-agent-preset/**',
       'packages/extensions/cordis-host-runner/**',

@@ -103,6 +103,19 @@ function shEchoTo(arg: string, redirect = ''): string {
 }
 
 posixOnly('ClaudeCliAdapter: stdout/stderr classification through a fake binary', () => {
+  it('translates a well-formed result document into stream chunks', async () => {
+    const doc = JSON.stringify({
+      type: 'result', is_error: false, result: 'Hello from the fake CLI.', stop_reason: 'end_turn',
+      total_cost_usd: 0.001, duration_ms: 12, session_id: 'fake-session',
+      usage: { input_tokens: 5, output_tokens: 4 },
+    })
+    const binary = await writeFakeBinary('claude-ok', shEchoTo(doc))
+    const a = new ClaudeCliAdapter({ options: () => conn({ binary }) })
+    const { chunks, error } = await settleStream(a.stream(genOpts()))
+    expect(error).toBeUndefined()
+    expect(JSON.stringify(chunks)).toContain('Hello from the fake CLI.')
+  })
+
   it('rejects a result document whose type field is not "result"', async () => {
     const binary = await writeFakeBinary('claude-typed', shEchoTo('{"type":"other"}'))
     const a = new ClaudeCliAdapter({ options: () => conn({ binary }) })
