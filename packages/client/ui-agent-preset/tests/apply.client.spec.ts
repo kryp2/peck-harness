@@ -1016,6 +1016,35 @@ describe('AgentPresetSeatController reconciliation', () => {
     expect(controller.store.getSnapshot()).toMatchObject({ current: 'coding', busy: false })
   })
 
+  it('drops a stage that outlives the two-minute staging window (Peck fork)', async () => {
+    // A stage bridges a pick and the session its flow mints moments later; a
+    // leftover must not spend itself on a blank session that arrives long after.
+    vi.useFakeTimers()
+    try {
+      const select = vi.fn((_id: SessionId, preset: string) => Promise.resolve({ ok: true as const, value: preset }))
+      let current: { id: SessionId; blank: boolean; projectionValues: { agentPreset: string } } | undefined
+      const controller = new AgentPresetSeatController({ ...developerTools(), remote: { agentPresets: { select } } } as never,
+        () => current)
+      controller.stage('minimal')
+      await controller.apply()
+      expect(select).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(2 * 60_000 + 1)
+      current = { id: SessionId('late'), blank: true, projectionValues: { agentPreset: 'standard' } }
+      await controller.apply()
+
+      expect(select).not.toHaveBeenCalled()
+      expect(controller.store.getSnapshot().current).toBe('standard')
+
+      // Inside the window the documented hand-off still applies.
+      controller.stage('minimal')
+      await controller.apply()
+      expect(select).toHaveBeenCalledExactlyOnceWith(SessionId('late'), 'minimal')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('does not apply a waiting Settings choice to a replacement binding', async () => {
     const reply = Promise.withResolvers<{ ok: true; value: string }>()
     const select = vi.fn(() => reply.promise)

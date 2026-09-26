@@ -58,7 +58,7 @@ export interface AgentPresetStage {
   /** Whether the receiving chip should announce the applied choice once. */
   introduce: boolean
   /** When the pending choice was staged; a stage older than {@link STAGE_MAX_AGE_MS} is dropped unapplied. */
-  stagedAt?: number
+  stagedAt?: number | undefined
 }
 
 /** Stages the next session's preset and applies it when one appears. */
