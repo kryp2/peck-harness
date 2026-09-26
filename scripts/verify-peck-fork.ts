@@ -171,6 +171,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Workspace and gate registration of peck packages',
     owner: 'upstream-shared',
     patterns: [
+      'apps/cli/package.json',
       'pnpm-lock.yaml',
       'tsconfig.base.json',
       'tsconfig.host.json',
@@ -192,6 +193,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'scripts/verify-peck-fork.spec.ts',
       'scripts/verify-peck-fork.ts',
       'scripts/verify-repository-references.ts',
+      'scripts/no-unknown-casts.baseline.json',
     ],
     retirement: 'Permanent fork plumbing; retiring it means upstream adopted the divergence gate itself.',
   },

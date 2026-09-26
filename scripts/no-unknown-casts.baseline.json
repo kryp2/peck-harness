@@ -885,6 +885,12 @@
   "packages/core/agent-loop/tests/coverage-edges.spec.ts": {
     "63887ee8072fea49d495c955fc77afa33c2488bb341c7e9daf346a03746c0404": 1
   },
+  "packages/core/agent-loop/tests/inbox.spec.ts": {
+    "468ded343acb9132e57e3c8c49e59fc266579c8814d57901040fbbe681d0b9ed": 1,
+    "20b591b6c06f430964092ee8c19c916141c1bedb03333122adf032b6aac60e95": 1,
+    "cb2ee976b75971978e3e27bc7f648b096171c493ccc4347fa742f55b90d1feaf": 1,
+    "1bedf6c29e80093f93082e0305078c6d8599ba368cab3afcbeb426fbc59cc95f": 1
+  },
   "packages/core/agent-loop/tests/interception.spec.ts": {
     "506ab076906011d029fcc987ce50c3c656430e3f20814786cad7ec32ff2bb77c": 1
   },
@@ -1263,6 +1269,9 @@
     "071d912e5507b95946e1bcc86f3bfabb1cd627f749577c84ddab9dd683b4754c": 1,
     "38caffb2ff356f8b89581ba61f2c3462a00f69d28a87563134316982b0170d53": 1
   },
+  "packages/extensions/cordis-host-runner/tests/inspect-registry.spec.ts": {
+    "aeefe408589a3522941044dc965a2a452c8190a705ebd321c6fb80c48483dd08": 1
+  },
   "packages/extensions/tool-cordis/src/index.ts": {
     "13adc0c508c202091c9929de9cf6c9cd8182d78ff5953a64e6ec61394bbf4552": 1
   },
@@ -1304,6 +1313,10 @@
   "packages/goal/goal/src/index.ts": {
     "09a26f55e58db3477446e73f59bd3cdf678ae76ff8f54d185ec4a0ce0dc7da2d": 1
   },
+  "packages/guard/deployment-refusal/tests/deployment-refusal.spec.ts": {
+    "2e78263d16d54ccfd8d322bcdf1bf738bd8134e15c24063ece9a1d1b52f4ebd9": 1,
+    "d45d3c575f39585b1669647802567d782e952ec5dae78db0e95e0210437e7ef3": 1
+  },
   "packages/hooks/hook-protocol/tests/events.spec.ts": {
     "a59fe57e5f3994018a6bd25208b9c2f56a7bcf7353d6ec2d453564f3f5c225f2": 1
   },
@@ -1340,6 +1353,10 @@
   "packages/interaction/permission-presets/tests/projection.spec.ts": {
     "0c7b023d04a2d6744d9844f27de8438231e642fd058e2b75e113a1996711014a": 1
   },
+  "packages/interaction/telegram-answerer/tests/telegram-answerer.spec.ts": {
+    "5f0d56d032dbe3652488d96c64c887e5eeee55735e4af7426f7e4f138573562b": 1,
+    "24b054daad06dbe76b04ceb43671252d44ed744f82c5bfb8818da6082a2835fc": 1
+  },
   "packages/interaction/tool-ask-user/tests/tool-ask-user.spec.ts": {
     "60655aea47d3d8667f90341b58e3faaf64d12670b9592af837aa40ecf7b83583": 1,
     "d423bbcd1caff7aab2e2de52564efbc9061e775620a530157805a43d851c6fe9": 1
@@ -1351,6 +1368,12 @@
     "971ec45a1146ab52f2fb13f75b782d5d35c0fb2ddba1fb9ccab14cc54f7291d5": 1,
     "a6a2f2761dfd14ff3624a7f8684b025d6aa733d41cac4381db7c83f2a38f0c35": 1,
     "f33c4a795e2cda267cb28d2937c632d56134b8e6438d21e4bf74da2735b1c154": 1
+  },
+  "packages/interaction/user-questions/src/index.ts": {
+    "4776062f7f40c1264d021af12758a2e998c11607c5d932f7639d2de6bac3c6a6": 1
+  },
+  "packages/interaction/user-questions/tests/composition.spec.ts": {
+    "59c63f734e8bba862325f776e3fcbebd78a84cfb4161f8df41c216950d9bf351": 1
   },
   "packages/interaction/user-questions/tests/user-questions.spec.ts": {
     "60655aea47d3d8667f90341b58e3faaf64d12670b9592af837aa40ecf7b83583": 1
@@ -1371,6 +1394,20 @@
   },
   "packages/llm/deepseek-llm-api-extensions/src/index.ts": {
     "1f519aabb00553384bc9c1c57064a1ed6fcd757032061e1b14e0718d91dd4817": 1
+  },
+  "packages/llm/llm-claude-cli/tests/loader-composition.spec.ts": {
+    "59c63f734e8bba862325f776e3fcbebd78a84cfb4161f8df41c216950d9bf351": 1
+  },
+  "packages/llm/llm-claude-cli/tests/serialize.spec.ts": {
+    "6d47fd8b80a9b7adf5e2b8a0456b821593b166373a514bbd4bf8431881f86973": 1,
+    "641590436f231afa1c0481387f8ae0958ab6556b873efc49564b58d635618aaf": 1,
+    "c8fb7de47bcc88ada78ded6c638ded5598506381db949f6f90175ccf18a0767b": 1,
+    "eba925078b552de511a95e7ddf1adf9bfeb3d34850dd1949d0cbf80a0f3751c0": 1,
+    "09dd16a1c3eeec83728cf8fb621f1fbf73f2ea867432f8042df5613369de1072": 1,
+    "b9802e6cae5e12018423f28cd743eb54613ace513ec033a01668cea6857f2d94": 1,
+    "e2d7c3a43e7f88c3e67688e1f245ecd9004a593ff931943de5e504538a91537b": 1,
+    "f34aed511982cd6ede77bcecb092bf87f58da3fb167e518b2c0d95291e625c07": 1,
+    "a57cbf96da4aef126569a0b9bec89f91a4ac6eec5b6f30f2b407bf2834926097": 1
   },
   "packages/llm/llm-pi-ai/src/catalog.ts": {
     "5b1064d0195802d24eaa5155c66eb381da6046a8ccd0cacc3d852336475da7ef": 1
@@ -1699,6 +1736,9 @@
     "ded70975f4359c57111a4de10143a2ddb83d1b273b655a1246b577c72faf4414": 1,
     "e112e0b1c4427023e8cccf70d759f93cf3fff2646de4ec4955d3f6163bc0c3c0": 1
   },
+  "packages/session/session-metered-receipt/tests/receipt.spec.ts": {
+    "4f824cb003ad6fd944f2ede4d895251cb427361864ce3ffcc50cb64cf334ae34": 1
+  },
   "packages/session/session-persistence-jsonl/src/format.ts": {
     "00ef977a7fb6b45f6adcc0fb8a651423870859c2acf5187b89256762212c524a": 1,
     "7cb42fa3ace24d76644659f42b6f72ba3234b6d81cf330dae459fb9c37d63b69": 1,
@@ -1790,6 +1830,12 @@
     "05fec1b071c4806b5df0e642273ffa87489417bc21d01c79abdee56fa993091e": 1,
     "276133cf0e0a7a3f0adfedec0eeee1581a7af3cc1d3bafe7932db7ec5b8506fb": 1,
     "ad526f8b346ca3f2e278bd8f43478c60f94078ec0958fa929978ce1763be7702": 1
+  },
+  "packages/session/session-usage/tests/loader-composition.spec.ts": {
+    "59c63f734e8bba862325f776e3fcbebd78a84cfb4161f8df41c216950d9bf351": 1
+  },
+  "packages/session/session-usage/tests/projection.spec.ts": {
+    "3b32ebf30406556d63564044fac22d757947dc603a753559840117a2fefc84e8": 1
   },
   "packages/shell/bash-sandbox/tests/partial-landlock.spec.ts": {
     "50ac027a8a646160d7f7f539375421b31a9aa3da906d9a6be03222aaa8cb029a": 2
