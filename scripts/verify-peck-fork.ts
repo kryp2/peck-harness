@@ -145,6 +145,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'packages/plan/plan-mode/tests/plan-mode.spec.ts',
       'packages/preset/agent-preset-registry/src/display.ts',
       'packages/session/README.*',
+      'vitest.config.ts',
     ],
     retirement: 'Each change either lands upstream through GitHub Discussions when generic, or is deliberately re-applied across every upstream sync.',
   },

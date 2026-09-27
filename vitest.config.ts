@@ -103,6 +103,10 @@ const windowsRunnerCoverageExclusions = process.platform === 'win32'
       // win32.spec's injected bindings and exercised natively by every
       // Windows suite through the real backend.
       'packages/session/session-persistence-jsonl/src/lease.ts',
+      // Peck fork: the Claude CLI adapter's subprocess paths run only through
+      // the POSIX shebang fake binaries of adapter.spec, which self-skip on
+      // win32; the Linux lanes hold its per-file 100%.
+      'packages/llm/llm-claude-cli/src/adapter.ts',
     ]
   : []
 
