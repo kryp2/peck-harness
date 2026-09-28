@@ -1,8 +1,8 @@
 /**
  * Plugin-glue tests for the llm-claude-cli entry point: `resolveAdapterOptions`
  * defaults and failure arms, plus the mounted function plugin wired against a
- * real LlmRuntime and a real (in-memory) settings provider, so a stored
- * settings change is observable through subsequent adapter calls.
+ * real LlmRuntime. Profile edits reach the plugin as a Loader remount with a
+ * new Config, so each mount reads its own config per call.
  *
  * The Loader-level composition guard lives in loader-composition.spec.ts.
  */
@@ -11,32 +11,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
-import { SettingsProvider } from '@deepseek-ai/dsh-settings'
-import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import { resolveAdapterOptions } from '../src/index.ts'
 import * as ClaudeCli from '../src/index.ts'
 import type { Config } from '../src/index.ts'
 
-/** Mirrors the plugin's own settings namespace; not exported by the entry. */
-const NS = 'llm-claude-cli' as SettingsNamespace
-
-/** The smallest real provider: one in-memory document, always writable. */
-class MemorySettings extends SettingsProvider {
-  doc: Record<string, unknown> = {}
-
-  get writable(): boolean {
-    return true
-  }
-
-  protected load(): Promise<Record<string, unknown>> {
-    return Promise.resolve(structuredClone(this.doc))
-  }
-
-  protected persist(ns: SettingsNamespace, section: Record<string, unknown>): Promise<void> {
-    this.doc = { ...this.doc, [ns]: structuredClone(section) }
-    return Promise.resolve()
-  }
-}
+/** Mirrors the plugin's own configurable-provider namespace; not exported by the entry. */
+const NS = 'llm-claude-cli'
 
 let context: Context | undefined
 
@@ -46,17 +26,15 @@ afterEach(async () => {
 })
 
 /**
- * Boot the llm runtime, the in-memory settings provider, and the plugin under
- * test on one context; every registration rides fibers disposed in afterEach.
+ * Boot the llm runtime and the plugin under test on one context; every
+ * registration rides fibers disposed in afterEach.
  */
-async function boot(config: Config): Promise<{ ctx: Context; settingsFiber: Context['fiber'] }> {
+async function boot(config: Config): Promise<{ ctx: Context }> {
   const ctx = new Context()
   context = ctx
   await ctx.plugin(LlmRuntime)
-  const settingsFiber = ctx.plugin(MemorySettings)
-  await settingsFiber.await()
   await ctx.plugin(ClaudeCli, config)
-  return { ctx, settingsFiber }
+  return { ctx }
 }
 
 /** Drain one streaming model call into the collected chunk list. */
@@ -87,15 +65,13 @@ describe('llm-claude-cli plugin glue', () => {
     expect(entry?.settingsNs).toBe(NS)
   })
 
-  it('re-reads connection facts from the settings scope on each call', async () => {
-    const { settingsFiber } = await boot({ binary: 'claude-original' })
+  it('reads connection facts from the mounted config on each call', async () => {
+    await boot({ binary: 'claude-original' })
     const llm = context?.get('llm') as LlmRuntime
     const opts: GenerateOptions = { provider: 'claude-cli', model: 'sonnet', messages: [] }
-    // Before any stored change the composed binary is used verbatim.
+    // The composed binary is used verbatim, on every call.
     expect(failureMessage(await drain(llm, opts))).toContain('claude-original')
-    await settingsFiber.ctx.settings.replace(NS, { binary: 'claude-swapped' })
-    // A stored change must reach the next stream call through the swapped source.
-    expect(failureMessage(await drain(llm, opts))).toContain('claude-swapped')
+    expect(failureMessage(await drain(llm, opts))).toContain('claude-original')
   })
 })
 

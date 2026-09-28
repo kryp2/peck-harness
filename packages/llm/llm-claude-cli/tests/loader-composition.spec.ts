@@ -4,9 +4,9 @@
  * instance is registered, and a single GenerateOptions call drives one real
  * `claude --print` subprocess end-to-end.
  *
- * The e2e test self-skips when `claude` is not on $PATH so CI without the CLI
- * stays green. Locally on Thomas's machine the CLI is installed and the call
- * uses his Claude subscription.
+ * The e2e test is opt-in: it runs only with `DSH_CLAUDE_CLI_E2E=1` and a
+ * `claude` binary on $PATH, because each run spends the operator's Claude
+ * subscription quota. Routine unit and coverage runs skip it.
  */
 
 import { existsSync } from 'node:fs'
@@ -72,10 +72,11 @@ async function loadComposition(binary: string): Promise<{ ctx: Context }> {
 }
 
 describe('llm-claude-cli real composition', () => {
-  // Self-skip when the CLI is not on PATH. The launcher's `which claude`
-  // is the cheapest probe; --version is even safer but takes longer.
-  const hasCli = existsSync('/home/thomas/.local/bin/claude')
-    || process.env['PATH']?.split(':').some(p => existsSync(join(p, 'claude'))) === true
+  // Opt-in, then self-skip when the CLI is not on PATH. The launcher's
+  // `which claude` is the cheapest probe; --version is safer but slower.
+  const hasCli = process.env['DSH_CLAUDE_CLI_E2E'] === '1'
+    && (existsSync('/home/thomas/.local/bin/claude')
+      || process.env['PATH']?.split(':').some(p => existsSync(join(p, 'claude'))) === true)
 
   it.skipIf(!hasCli)('boots from cordis.yml and routes a GenerateOptions call through `claude --print`', async () => {
     const binary = hasCli ? '/home/thomas/.local/bin/claude' : 'claude'

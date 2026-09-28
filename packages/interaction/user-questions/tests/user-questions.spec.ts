@@ -559,6 +559,30 @@ describe('UserQuestionService racing registry', () => {
     }
   })
 
+  it('races the agent-scoped waterfall beside the event answerers', async () => {
+    const ctx = new Context()
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(UserQuestionService)
+    const agent = stubAgent('scoped-root')
+    ctx.agents.enter(agent, undefined)
+    const racing = gatedAttempt(ctx)
+
+    const asked = ctx.userQuestions.ask({ questions: [{ id: 'confirm', question: 'Proceed?' }], agent })
+    racing.claim(answer('racing'))
+
+    await expect(asked).resolves.toEqual(answer('racing'))
+  })
+
+  it('lets a seam-taxonomy waterfall rejection settle a racing ask', async () => {
+    const ctx = new Context()
+    await ctx.plugin(UserQuestionService)
+    gatedAttempt(ctx)
+    ctx.on('user-questions/request', () => Promise.reject(new UserQuestionError('malformed intent', 'BAD_INTENT')))
+
+    await expect(ctx.userQuestions.ask({ questions: [{ id: 'confirm', question: 'Proceed?' }] }))
+      .rejects.toMatchObject({ name: 'UserQuestionError', code: 'BAD_INTENT' })
+  })
+
   it('races a legacy registerProvider shim against event listeners', async () => {
     const ctx = new Context()
     await ctx.plugin(UserQuestionService)

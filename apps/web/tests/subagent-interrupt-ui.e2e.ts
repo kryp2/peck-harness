@@ -27,7 +27,7 @@ import {
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
 
-const BASE_FIXTURE = fileURLToPath(new URL('../../../snapshots/web/live-interactions/session.v2.jsonl', import.meta.url))
+const BASE_FIXTURE = fileURLToPath(new URL('../../../snapshots/web/live-interactions/session.v3.jsonl', import.meta.url))
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('../../../snapshots/web/subagent-interrupt', import.meta.url))
 const OFFLINE_COMPOSER_EXPECTED = join(SNAPSHOT_DIR, 'offline-composer.expected.md')
@@ -185,20 +185,25 @@ describe.skipIf(MODE === 'record')('web e2e: composer interrupt for a running co
 
   it('interrupts the live child through the parent-offline composer', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-subagent-interrupt-offline'))
-    // Simulate a parent that went offline: the catalog delivers
-    // parentAvailable: false while the child Activation stays live (the
-    // interrupt RPC itself needs no live parent — covered host-side by
-    // subagent-interrupt.e2e.ts).
-    const pattern = '**/api/subagents/list'
+    // The parent is unavailable in the Session list while the child stays live.
+    const pattern = '**/api/session/list'
     await page.route(pattern, async (route) => {
       const response = await route.fetch()
       const body = await response.json() as {
-        result: { ok: true; value: { parentAvailable: boolean } } | { ok: false }
+        result: { ok: true; value: { items: { sessionId: SessionId; agentAvailable: boolean }[] } } | { ok: false }
       }
-      if (body.result.ok) body.result.value.parentAvailable = false
+      if (body.result.ok) {
+        const summary = body.result.value.items.find(session => session.sessionId === parent.id)
+        if (summary === undefined) throw new Error('parent missing from Session list')
+        summary.agentAvailable = false
+      }
       await route.fulfill({ response, json: body })
     })
     try {
+      const warningStart = tripwire.warnings.length
+      await page.reload({ waitUntil: 'load' })
+      await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+      acknowledgeReloadConnectionLoss(tripwire, warningStart)
       await page.getByRole('button', { name: /1 subagent/ }).click()
       await page.getByRole('treeitem', { name: new RegExp(LABEL) }).click()
       const input = page.getByRole('textbox', {
@@ -264,7 +269,11 @@ describe.skipIf(MODE === 'record')('web e2e: composer interrupt for a running co
 
   it('interrupts through subagents/interruptByParent, parks the follow-up, and resumes it FIFO', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-subagent-interrupt-flow'))
-    // Reselect the child with the truthful catalog: parent available again.
+    // A new connection reloads the truthful parent-availability hint.
+    const warningStart = tripwire.warnings.length
+    await page.reload({ waitUntil: 'load' })
+    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    acknowledgeReloadConnectionLoss(tripwire, warningStart)
     await page.getByRole('navigation', { name: 'Session hierarchy' })
       .getByRole('button').first().click()
     await page.getByRole('button', { name: /1 subagent/ }).click()
@@ -279,10 +288,12 @@ describe.skipIf(MODE === 'record')('web e2e: composer interrupt for a running co
     expect(await input.isDisabled()).toBe(false)
 
     // Queue a follow-up through Send while independent Stop remains available.
+    // The running child's Send names its delivery like an ordinary session:
+    // the default busy-state preference is Queue.
     const promptResponse = page.waitForResponse(response =>
       new URL(response.url()).pathname === '/api/subagents/prompt')
     await input.fill(FOLLOWUP)
-    await page.getByRole('button', { name: 'Send message' }).click()
+    await page.getByRole('button', { name: 'Queue message' }).click()
     expect(((await (await promptResponse).json()) as { result: { ok: boolean } }).result)
       .toMatchObject({ ok: true })
 

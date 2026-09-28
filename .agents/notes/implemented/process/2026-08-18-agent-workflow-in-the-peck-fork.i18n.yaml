@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-18-agent-workflow-in-the-peck-fork.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-08-18-agent-workflow-in-the-peck-fork.md
-2026-08-18-agent-workflow-in-the-peck-fork.md: 2c0f9eae65d24696bfd5ed491746918f271d6ed7
-2026-08-18-agent-workflow-in-the-peck-fork.zh.md: f24231982ecca5d2b0e4d3e2911737d38412c07f
+/agent-note-how-agents-build-the-peck-harness-fork:
+  en: 048978f0ab2dee93
+  zh: 2a586121979b497a
+/agent-note-how-agents-build-the-peck-harness-fork/problem:
+  en: b446a55824460a88
+  zh: c2230d55945b844b
+/agent-note-how-agents-build-the-peck-harness-fork/decision:
+  en: cb8aa42f2db6b502
+  zh: d838bb4c4f644ce1
+/agent-note-how-agents-build-the-peck-harness-fork/alternatives-considered:
+  en: ea8b9fb0cd0d8d1f
+  zh: 549455c27c6f3576
+/agent-note-how-agents-build-the-peck-harness-fork/consequences:
+  en: db437ece4ae5af7a
+  zh: e692af45b61bd6d4

@@ -8,6 +8,7 @@ import GoalService, { GoalId } from '@deepseek-ai/dsh-goal'
 import type { GoalRef } from '@deepseek-ai/dsh-goal'
 import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { MessageSource } from '@deepseek-ai/dsh-llm'
+import type { ContextFormed } from '@deepseek-ai/dsh-llm'
 import SessionStore, {
   SESSION_FORMAT_VERSION,
   Session,
@@ -20,6 +21,12 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import * as toolGoal from '@deepseek-ai/dsh-tool-goal'
 import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'test': { kind: 'test' } & ContextFormed
+  }
+}
 
 const testToolSignal = new AbortController().signal
 
@@ -101,7 +108,7 @@ async function harness(config: toolGoal.Config = {}) {
   await ctx.plugin(GoalService)
   const fiber = await ctx.plugin(toolGoal, config)
   const root = stubAgent(`goal-tool-root-${Math.random()}`, undefined, ctx)
-  ctx.agents.register(root.agent)
+  await ctx.agents.register(root.agent)
   return { ctx, fiber, root }
 }
 
@@ -249,14 +256,14 @@ describe('goal tool execution authority', () => {
     expect(driverless.error?.info?.code).toBe('GOAL_TOOL_DRIVER_REQUIRED')
     closeTurn(root, 1)
 
-    openTurn(root, { kind: 'plugin', plugin: 'test' })
+    openTurn(root, { kind: 'test' })
     const nonHuman = await execute(ctx, 'create_goal', { objective: 'forged' }, root.agent)
     expect(nonHuman.error?.info?.code).toBe('GOAL_TOOL_AUTHORITY_REQUIRED')
     closeTurn(root, 2)
 
     const child = stubAgent('goal-tool-child')
     ctx.agents.enter(child.agent, root.agent)
-    ctx.agents.announce(child.agent)
+    await ctx.agents.announce(child.agent, 'startup')
     openTurn(child, { kind: 'user' })
     const childResult = await execute(ctx, 'create_goal', { objective: 'child goal' }, child.agent)
     expect(childResult.error?.info?.code).toBe('GOAL_TOOL_AUTHORITY_REQUIRED')
@@ -290,7 +297,7 @@ describe('goal tool execution authority', () => {
       isSeeded: true,
     }, SessionLogOffset(root.session.seq))
     const fork = stubAgent(forkId, forkSession)
-    ctx.agents.register(fork.agent)
+    await ctx.agents.register(fork.agent)
     expect(ctx.goals.get(fork.agent)).toMatchObject({ id: created.id, activation: 'disarmed' })
 
     openTurn(fork, { kind: 'user' }, '继续这个目标')
@@ -313,7 +320,7 @@ describe('goal tool execution authority', () => {
 
   it('rejects terminal reporting without human input or a current goal round', async () => {
     const { ctx, root } = await harness()
-    openTurn(root, { kind: 'plugin', plugin: 'test' })
+    openTurn(root, { kind: 'test' })
     const result = await execute(ctx, 'update_goal', {
       goal_id: 'goal-missing', revision: 1, action: 'complete',
     }, root.agent)
@@ -345,7 +352,7 @@ describe('goal tool execution authority', () => {
   it('rejects an initiator different from exec.agent', async () => {
     const { ctx, root } = await harness()
     const other = stubAgent('goal-tool-other')
-    ctx.agents.register(other.agent)
+    await ctx.agents.register(other.agent)
     openTurn(other, { kind: 'user' })
     const result = await execute(ctx, 'get_goal', {}, other.agent, root.agent)
     expect(result.error?.info?.code).toBe('GOAL_TOOL_DRIVER_REQUIRED')
@@ -353,7 +360,7 @@ describe('goal tool execution authority', () => {
 })
 
 describe('goal tool state transitions', () => {
-  it('reads null, then edits, pauses, and resumes by exact revision in one human turn', async () => {
+  it('reads null, then edits and pauses by exact revision in one human turn', async () => {
     const { ctx, root } = await harness()
     openTurn(root, { kind: 'user' })
     expect(resultJson(await execute(ctx, 'get_goal', {}, root.agent))).toEqual({ goal: null })
@@ -367,10 +374,31 @@ describe('goal tool state transitions', () => {
       goal_id: goal['id'], revision: goal['revision'], action: 'pause',
     }, root.agent))
     expect(goal).toMatchObject({ phase: 'paused', revision: 3 })
-    goal = resultGoal(await execute(ctx, 'update_goal', {
+    const rejected = await execute(ctx, 'update_goal', {
       goal_id: goal['id'], revision: goal['revision'], action: 'resume',
+    }, root.agent)
+    expect(rejected.error?.info?.code).toBe('GOAL_TOOL_RESUME_PAUSED')
+    const resumed = ctx.goals.resume(root.agent, {
+      id: GoalId(goal['id'] as string), revision: goal['revision'] as number,
+    })
+    expect(resumed).toMatchObject({ phase: 'active', revision: 4 })
+  })
+
+  it('rejects update_goal resume of a durable paused goal in a later human turn', async () => {
+    const { ctx, root } = await harness()
+    const firstTurn = openTurn(root, { kind: 'user' })
+    let goal = resultGoal(await execute(ctx, 'create_goal', { objective: 'pause me' }, root.agent))
+    goal = resultGoal(await execute(ctx, 'update_goal', {
+      goal_id: goal['id'], revision: goal['revision'], action: 'pause',
     }, root.agent))
-    expect(goal).toMatchObject({ phase: 'active', revision: 4 })
+    closeTurn(root, firstTurn)
+
+    openTurn(root, { kind: 'user' }, 'later unrelated request')
+    const rejected = await execute(ctx, 'update_goal', {
+      goal_id: goal['id'], revision: goal['revision'], action: 'resume',
+    }, root.agent)
+    expect(rejected.error?.info?.code).toBe('GOAL_TOOL_RESUME_PAUSED')
+    expect(ctx.goals.get(root.agent)).toMatchObject({ phase: 'paused', activation: 'disarmed' })
   })
 
   it('injects one wrap-up instruction for an autonomous completion but leaves a human pause interactive', async () => {
@@ -383,13 +411,11 @@ describe('goal tool state transitions', () => {
     expect(resultGoal(paused)).toMatchObject({ phase: 'paused' })
     expect(paused.concludesTurn).toBeUndefined()
     expect(paused.additionalContexts).toBeUndefined()
-    const resumed = resultGoal(await execute(ctx, 'update_goal', {
-      goal_id: created.id, revision: 2, action: 'resume',
-    }, root.agent))
+    const resumed = ctx.goals.resume(root.agent, { id: created.id, revision: 2 })
     closeTurn(root, humanTurn)
 
     openTurn(root, {
-      kind: 'goal', goalId: created.id, revision: resumed['revision'] as number, round: 1,
+      kind: 'goal', goalId: created.id, revision: resumed['revision'], round: 1,
     })
     const complete = await execute(ctx, 'update_goal', {
       goal_id: created.id, revision: resumed['revision'], action: 'complete',
@@ -399,8 +425,7 @@ describe('goal tool state transitions', () => {
     const contexts = complete.additionalContexts ?? []
     expect(contexts).toHaveLength(1)
     expect(contexts[0]?.source).toEqual({
-      kind: 'plugin',
-      plugin: 'tool-goal',
+      kind: 'tool-goal',
       form: 'notice',
       summary: 'complete: pause cleanly',
     })
@@ -428,7 +453,7 @@ describe('goal tool state transitions', () => {
     let turn = openTurn(root, { kind: 'user' })
     const created = ctx.goals.create(root.agent, { objective: 'continue later' })
     closeTurn(root, turn)
-    agentEvents(ctx, root.agent).emit('agent/session-start', { source: 'resume' })
+    await agentEvents(ctx, root.agent).serial('agent/created', { source: 'resume' })
     expect(ctx.goals.get(root.agent)?.activation).toBe('disarmed')
     turn = openTurn(root, { kind: 'user' }, '继续')
     const resumed = await execute(ctx, 'update_goal', {
@@ -522,6 +547,8 @@ describe('goal tool state transitions', () => {
     }, root.agent)
     expect(resultGoal(paused)).toMatchObject({ phase: 'paused', objective: 'edited' })
     goal = ctx.goals.get(root.agent)!
+    goal = ctx.goals.resume(root.agent, { id: goal.id, revision: goal.revision })
+    goal = ctx.goals.disarm(root.agent)!
 
     const resumed = await execute(ctx, 'update_goal', {
       goal_id: goal.id,

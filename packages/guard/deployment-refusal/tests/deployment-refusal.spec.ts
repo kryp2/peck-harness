@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
+import { auditStartupEntries } from '@deepseek-ai/dsh-app-boot'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
@@ -183,9 +184,12 @@ export const apply = (ctx, config) => globalThis.__deploymentRefusalGuard.apply(
     await ctx.plugin(Loader)
     ctx.loader.builtins.include = Include
     guardGlobals.__deploymentRefusalGuard = { Config, apply }
+    // Loader settlement no longer rejects for a failed entry; the boot's
+    // startup audit is what refuses readiness, and only for required ids.
     const failure = await ctx.loader
       .create({ name: 'cordis:include', config: { path: pathToFileURL(join(dir, 'cordis.yml')).href } })
       .then(() => ctx.loader.await())
+      .then(() => auditStartupEntries(ctx, 'dsh', () => {}))
       .then((): undefined => undefined, (error: unknown) => error)
     DISPOSERS.push(() => ctx.fiber.dispose())
     return { failure, policyMode: ctx.get('sandboxPolicy')?.defaultMode }

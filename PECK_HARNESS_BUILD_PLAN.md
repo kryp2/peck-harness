@@ -4,7 +4,7 @@ How this harness executes the [distribution and metered routing plan](.agents/no
 
 ## A. Upgrades BEFORE we start (prerequisites, in order)
 
-1. **Land the preset stage-storm fix in the fork trunk** — branch `fix/agent-preset-stage-storm-2026-08-18` (commit `ce623ca641`) is ready; upstream takes no external PRs and has PRs disabled, so the fix lives in the fork trunk; optionally report the bug upstream via GitHub Discussions.
+1. **Land the preset stage-storm fix in the fork trunk** — branch `fix/agent-preset-stage-storm-2026-08-18` is ready; upstream takes no external PRs and has PRs disabled, so the fix lives in the fork trunk; optionally report the bug upstream via GitHub Discussions.
 2. **Fix the live deployment** — cherry-pick the fix into the branch the running `dsh web` serves from, rebuild in a coordinated window, verify preset switching works end-to-end (new session starts on Peck.to; no storm).
 3. ~~**Toolchain alignment window**~~ — done 2026-08-22: node_modules reinstalled on the pinned pnpm 11.7.0 in a server-down window (see `IN_FLIGHT.md`).
 4. **Repair the local e2e environment** — three apps/web files (agent-preset-selection, skill-invocation-policy, skill-user-invoke) fail identically with and without changes on this machine (skill-discovery environment failures). Agents need honest green/red before fan-out begins.
@@ -20,8 +20,8 @@ How this harness executes the [distribution and metered routing plan](.agents/no
 
 ## C. Work order (from the codex plan)
 
-- [x] 0. Sync fork master to upstream baseline (rc.7, `99f6f02fec`)
-- [x] 1. Preset stage-storm fix — merged to fork master (`ce623ca641`); agent-workflow + plan notes merged (`432ac1315b`); upstream Discussions post pending (token cannot write discussions)
+- [x] 0. Sync fork master to upstream baseline (rc.7)
+- [x] 1. Preset stage-storm fix — merged to fork master; agent-workflow + plan notes merged; upstream Discussions post pending (token cannot write discussions)
 - [x] 2. Split the mixed branch `feat/user-questions-waterfall-telegram` — landed as separate generic and brand/inbox work on master (post-sync repair, fork PR #11)
 - [ ] 3. Freeze receipt schema + golden vectors (overlay-schema repo owns; harness + gateway pin one revision)
 - [ ] 4. Repair reservation + channel opening (llm-gateway atomic reservation; BRC-100 funding proof after SPV)

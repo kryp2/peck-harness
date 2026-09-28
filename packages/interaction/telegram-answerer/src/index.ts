@@ -222,7 +222,7 @@ async function telegramFetch(
     ...(signal === undefined ? {} : { signal }),
     ...(body === undefined ? {} : { stdin: JSON.stringify(body) }),
   }
-  const result = await shell.run(shell.resolve(request))
+  const result = await (await shell.execute(shell.resolve(request))).result()
   const text = outText(result)
   let decoded: TelegramEnvelope
   try {

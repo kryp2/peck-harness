@@ -17,7 +17,7 @@ Automatic triggers are budgeted to what only automation can prove; everything el
 - `e2e.yml` is `workflow_dispatch`-only and loses its nightly schedule. It spends real API credits in addition to minutes; a maintainer dispatches it when provider behavior is under test.
 - `scripts/ci-workflow.spec.ts` pins every shape above, plus the manual-only state of `e2e.yml` and `sandbox.yml`, so a future edit cannot silently reintroduce automatic spend.
 
-The same PR repairs pre-existing drift: commit `e76268ce7e` deleted `issue-lifecycle.yml` and `issue-policy.yml` but left their assertions behind, which kept this spec failing on master.
+The same PR repairs pre-existing drift: an earlier upstream commit deleted `issue-lifecycle.yml` and `issue-policy.yml` but left their assertions behind, which kept this spec failing on master.
 
 ## Consequences
 

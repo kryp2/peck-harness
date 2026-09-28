@@ -1,6 +1,61 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/session/session-metered-receipt/README.md
-README.md: 51648fc5ba65371e9ca18e09a4e7abd1f682a6e2
-README.zh.md: 9e72e89651005ed2b30584d0d9baeff6164fbd80
+/:
+  en: 8a138e0d2e8a8dbd
+  zh: 4e1a73b5e04b30ea
+/deepseek-ai-dsh-session-metered-receipt:
+  en: 206be398748884f1
+  zh: 36663ecd4a433ef2
+/deepseek-ai-dsh-session-metered-receipt/summary:
+  en: bdc3dc7af5cc34e1
+  zh: cf13cefd5bef8e1e
+/deepseek-ai-dsh-session-metered-receipt/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/deepseek-ai-dsh-session-metered-receipt/use-this-package:
+  en: 99283876d21906b7
+  zh: 1f0c1d3de1a7831b
+/deepseek-ai-dsh-session-metered-receipt/use-this-package/when-to-choose-it:
+  en: c4b245906e4aa96f
+  zh: e1f6a697a0ecb818
+/deepseek-ai-dsh-session-metered-receipt/use-this-package/minimal-configuration:
+  en: f237acf65652401d
+  zh: 6a552e20a6cbdca2
+/deepseek-ai-dsh-session-metered-receipt/use-this-package/what-you-get:
+  en: 7b90ec867968a96d
+  zh: 88fdbe9ec55e714f
+/deepseek-ai-dsh-session-metered-receipt/understand-the-implementation:
+  en: b8ba65e7ba6369c3
+  zh: affdd9c1d3191968
+/deepseek-ai-dsh-session-metered-receipt/understand-the-implementation/design-concept:
+  en: 6dea1a45091d6f05
+  zh: 0d7dcffbc0258c03
+/deepseek-ai-dsh-session-metered-receipt/understand-the-implementation/source-map:
+  en: da4076676cd10739
+  zh: 0507e7998731688d
+/deepseek-ai-dsh-session-metered-receipt/further-exploration:
+  en: b89113354a4eb7c0
+  zh: 5ab396a46aad7787
+/deepseek-ai-dsh-session-metered-receipt/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-session-metered-receipt/model-experience/metered-receipt-projection:
+  en: cddf9591de9a52c4
+  zh: 72d48cbf0f9e9f22
+/deepseek-ai-dsh-session-metered-receipt/model-experience/metered-receipt-projection/what-the-model-sees:
+  en: 627879a14ca150ab
+  zh: 760b77cc120d21f7
+/deepseek-ai-dsh-session-metered-receipt/model-experience/metered-receipt-projection/token-effect:
+  en: 47cf87ec9b585116
+  zh: a5577470ecdee30a
+/deepseek-ai-dsh-session-metered-receipt/model-experience/metered-receipt-projection/kv-cache-effect:
+  en: 2dcfa3161a8cadb8
+  zh: 3e995b4e372618c4
+/deepseek-ai-dsh-session-metered-receipt/known-limitations-and-deferred-work:
+  en: 0c63df654f095967
+  zh: bd756086933dc5c9
+/deepseek-ai-dsh-session-metered-receipt/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

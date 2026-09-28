@@ -89,7 +89,7 @@ The race signal from `ask()` is observed promptly: it rides every curl run, so a
 Read these pages when an ask goes unclaimed or the racing behavior surprises. They move from the capability contract to the preset and tool that surface it.
 
 - [user-questions capability](../user-questions/README.md) — the racing channel answerers register on and the fail-closed semantics.
-- [peck preset](../../../apps/cli/config/agent-presets/peck) — the bare row that leaves this package disabled by default.
+- [peck preset](../../bundle/peck/presets/peck.patch.yml) — the bare row that leaves this package disabled by default.
 - [dsh-tool-ask-user](../tool-ask-user/README.md) — the tool owning the model-visible side of the question flow.
 
 -----

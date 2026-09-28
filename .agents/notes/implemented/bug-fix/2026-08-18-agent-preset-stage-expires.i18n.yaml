@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-18-agent-preset-stage-expires.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-18-agent-preset-stage-expires.md
-2026-08-18-agent-preset-stage-expires.md: b5c9aafa24d9b46e66d9d228f64f7a4f3b82708f
-2026-08-18-agent-preset-stage-expires.zh.md: 94afbe42f9eefd8f33dbf5573589af3ccae34dda
+/agent-note-the-agent-preset-stage-waits-at-most-two-minutes:
+  en: 9578ceb02289679d
+  zh: 9245ff66b03f5375
+/agent-note-the-agent-preset-stage-waits-at-most-two-minutes/problem:
+  en: e59b4ced78fe278c
+  zh: d14b38b3b9edc215
+/agent-note-the-agent-preset-stage-waits-at-most-two-minutes/decision:
+  en: c3d4f99d397bc16a
+  zh: ea2c5b13c3a714b3
+/agent-note-the-agent-preset-stage-waits-at-most-two-minutes/alternatives-considered:
+  en: b5e4db63597cb337
+  zh: 128293ece031fcc0
+/agent-note-the-agent-preset-stage-waits-at-most-two-minutes/consequences:
+  en: fe52bf9a82026d56
+  zh: aabe8f06ab621931

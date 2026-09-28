@@ -12,7 +12,7 @@ agent——无论是 harness 会话还是外部 CLI agent——都在 [分发计
 
 fork 中工作的常设规则：
 
-**基线。** `master` 以快进方式跟踪经过评审的上游基线（当前为 dsh-0.1.0-rc.7，`99f6f02fec`）。Peck 工作从基线切出分支；上游同步以 owner 对 master 的快进落地，绝不混入内容。
+**基线。** `master` 以快进方式跟踪经过评审的上游基线（当时为 dsh-0.1.0-rc.7）。Peck 工作从基线切出分支；上游同步以 owner 对 master 的快进落地，绝不混入内容。
 
 **fork 内没有 PR，upstream 也没有 PR。** GitHub fork 不承载指向自身的 pull request，而 upstream 当前完全不接受外部 pull request（见其 CONTRIBUTING）。变更以推送到 origin 的具名分支落地，并在检查通过后合入 fork 主干；值得与上游分享的通用修复，以 GitHub Discussions  bug 报告的形式附上修复方案提交；Peck 行为保持在插件与 `peck` bundle 之中——这也正是分发计划的形态。
 

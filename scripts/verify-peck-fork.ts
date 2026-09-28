@@ -19,7 +19,7 @@ const ROOT = resolve(import.meta.dirname, '..')
  * Upstream commit this fork's divergence is measured against. Refresh after
  * every upstream sync: `git fetch upstream && git merge-base upstream/master HEAD`.
  */
-export const UPSTREAM_MERGE_BASE = 'b0a7d2ce3b4c19d7452e364b2d7acbfa87e707ed'
+export const UPSTREAM_MERGE_BASE = '477b4f420553e8a52c2fbccc464d7561b239c443'
 
 /** Who owns a diverged path class and how an upstream sync treats it. */
 export type ForkPathOwner = 'peck' | 'upstream-shared'
@@ -89,10 +89,14 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'docs/event-producer-consumer.*',
       'docs/module-graph.*',
       'docs/persistence-catalog.*',
+      'docs/persistence-schema.json',
+      'docs/persistence-changes/2026-09-26-peck-metered-receipt.*',
+      'docs/persistence-changes/historical-formats/README.*',
       'docs/subsystems/extensions.*',
       'docs/subsystems/user-questions.*',
       'packages/core/scope/src/scoped-events.generated.ts',
       'packages/extensions/cordis-client-runner/src/client/slot-catalog.ts',
+      'packages/preset/agent-preset/skills/cordis-composition-reference/references/packages.md',
       'tsconfig.client.json',
     ],
     retirement: 'Never retired separately: the generators re-derive these files from whatever the diverged sources contain.',
@@ -112,12 +116,10 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
   },
   {
     id: 'peck-composition',
-    title: 'Peck composition layer (product bundle, removed brand package, agent preset)',
+    title: 'Peck composition layer (product bundle and its agent preset declaration)',
     owner: 'peck',
     patterns: [
-      'apps/cli/config/agent-presets/peck/**',
       'packages/bundle/peck/**',
-      'packages/client/ui-brand-peck/**',
     ],
     retirement: 'Wholly peck-owned path space: the product composition lives here so the generic presets, bundles, and brand packages stay upstream-neutral. Offered upstream only if upstream adopts a product-composition seam.',
   },
@@ -126,9 +128,12 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Feature work on upstream-shared packages',
     owner: 'upstream-shared',
     patterns: [
+      'packages/boot/app-boot/src/index.ts',
+      'packages/boot/app-boot/tests/app-boot.spec.ts',
       'packages/core/agent/**',
       'packages/core/agent-loop/src/inbox.ts',
       'packages/core/agent-loop/tests/inbox.spec.ts',
+      'packages/core/scope/tests/invariant.spec.ts',
       'packages/core/session/src/known-event-types.ts',
       'packages/client/ui-agent-preset/**',
       'packages/extensions/cordis-host-runner/**',
@@ -138,8 +143,9 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'packages/interaction/tool-ask-user/**',
       'packages/interaction/user-questions/**',
       'packages/plan/plan-mode/tests/plan-mode.spec.ts',
-      'packages/preset/agent-presets/src/display.ts',
+      'packages/preset/agent-preset-registry/src/display.ts',
       'packages/session/README.*',
+      'vitest.config.ts',
     ],
     retirement: 'Each change either lands upstream through GitHub Discussions when generic, or is deliberately re-applied across every upstream sync.',
   },
@@ -148,7 +154,6 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Fork naming and visual identity',
     owner: 'upstream-shared',
     patterns: [
-      'apps/cli/config/agent-presets/cordis/agent.cordis.yml',
       'apps/web/index.html',
       'apps/web/public/**',
       'apps/web/tests/**',
@@ -168,6 +173,7 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
     title: 'Workspace and gate registration of peck packages',
     owner: 'upstream-shared',
     patterns: [
+      'apps/cli/package.json',
       'pnpm-lock.yaml',
       'tsconfig.base.json',
       'tsconfig.host.json',
@@ -188,6 +194,8 @@ export const FORK_PATH_GROUPS: readonly ForkPathGroup[] = [
       'scripts/run-gates.ts',
       'scripts/verify-peck-fork.spec.ts',
       'scripts/verify-peck-fork.ts',
+      'scripts/verify-repository-references.ts',
+      'scripts/no-unknown-casts.baseline.json',
     ],
     retirement: 'Permanent fork plumbing; retiring it means upstream adopted the divergence gate itself.',
   },

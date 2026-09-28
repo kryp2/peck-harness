@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-08-19-metered-inference-receipt-schema.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-19-metered-inference-receipt-schema.md
-2026-08-19-metered-inference-receipt-schema.md: a5b1450794cd387b0041a91b3e0d18a2ab6404c6
-2026-08-19-metered-inference-receipt-schema.zh.md: 22745fbbf6900cbdb209241eaf49f9d44073e5b3
+/agent-note-freeze-metered-inference-receipt-schema-and-golden-vectors-c-3:
+  en: 3602e4bc7c255a68
+  zh: ea43fda78df947a6
+/agent-note-freeze-metered-inference-receipt-schema-and-golden-vectors-c-3/problem:
+  en: d6d2515c955ebf23
+  zh: fc903ecf2236a800
+/agent-note-freeze-metered-inference-receipt-schema-and-golden-vectors-c-3/decision:
+  en: c271fd679e1af021
+  zh: 441cf1e7b00a2fb7
+/agent-note-freeze-metered-inference-receipt-schema-and-golden-vectors-c-3/consequences:
+  en: 6361b401370ab0f4
+  zh: f34c9e6c7165849b
+/agent-note-freeze-metered-inference-receipt-schema-and-golden-vectors-c-3/alternatives-considered:
+  en: 719c39e18c38a3b1
+  zh: b51680f11710de52

@@ -12,7 +12,7 @@ Agents — harness sessions and external CLI agents alike — build the Peck dis
 
 Standing order for work in the fork:
 
-**Baseline.** `master` tracks the reviewed upstream baseline by fast-forward (currently dsh-0.1.0-rc.7, `99f6f02fec`). Peck work branches from the baseline; upstream syncs land as an owner fast-forward of master, never as mixed content.
+**Baseline.** `master` tracks the reviewed upstream baseline by fast-forward (at the time, dsh-0.1.0-rc.7). Peck work branches from the baseline; upstream syncs land as an owner fast-forward of master, never as mixed content.
 
 **No in-fork PRs, no upstream PRs.** GitHub forks host no pull requests against themselves, and upstream currently declines external pull requests outright (its CONTRIBUTING). A change lands as a named branch pushed to origin and merges to the fork trunk once its checks pass; a generic fix worth sharing upstream goes through GitHub Discussions as a bug report with the fix attached, and Peck behavior stays in plugins and the `peck` bundle, which is the distribution plan's shape anyway.
 

@@ -11,8 +11,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
+import * as AppBoot from '@deepseek-ai/dsh-app-boot'
 import { createLaunchEnvironmentSnapshot, DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import type { WebServer } from '@deepseek-ai/dsh-host-webserver'
@@ -55,7 +57,7 @@ type BrowserLauncher = ChildProcess & { stderr: PassThrough }
 
 /** Minimal browser-launcher process for the native handoff adapter. */
 function launcher(): BrowserLauncher {
-  return Object.assign(new EventEmitter(), { stderr: new PassThrough() }) as unknown as BrowserLauncher
+  return Object.assign(new EventEmitter(), { stderr: new PassThrough() }) as BrowserLauncher
 }
 
 /** Stage a dist fixture and point the bundle's resolver at it. */
@@ -100,7 +102,7 @@ function provideConnection(ctx: Context): void {
 
 /** A fake Loader whose settlement the test controls (the URL line waits on it). */
 function provideLoader(ctx: Context, settle: () => Promise<void> = async () => {}): void {
-  ctx.provide('loader', { await: settle } as never)
+  ctx.provide('loader', { await: settle, entries: () => [] } as never)
 }
 
 interface BashContribution {
@@ -183,6 +185,25 @@ describe('web-app runtime glue', () => {
     expect(section?.text).toContain('the Peck Harness Web GUI at http://127.0.0.1:4567')
     const webRuntime = contributions.find(contribution => contribution.name === 'web-runtime')
     expect(webRuntime?.variables.DSH_WEB_URL?.description).toBe('Canonical local URL of the Peck Harness Web GUI serving this session.')
+    await ctx.fiber.dispose()
+  })
+
+  it('falls back to the default product name when a programmatic config omits it', async () => {
+    stageDist()
+    const ctx = new Context()
+    ctx.provide('webServer', fakeHttpServer().server)
+    const contributions: BashContribution[] = []
+    ctx.provide('shellEnv', {
+      register: (contribution: BashContribution) => {
+        contributions.push(contribution)
+        return () => {}
+      },
+    } as never)
+    // Bypasses the schema default on purpose: apply() owns the fallback itself.
+    apply(ctx, { openBrowser: false, printUrl: false, surfaceContext: true, trustedHosts: [] } as never)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const webRuntime = contributions.find(contribution => contribution.name === 'web-runtime')
+    expect(webRuntime?.variables.DSH_WEB_URL?.description).toBe('Canonical local URL of the DeepSeek Harness Web GUI serving this session.')
     await ctx.fiber.dispose()
   })
 
@@ -343,6 +364,39 @@ describe('web-app runtime glue', () => {
     expect(log).not.toHaveBeenCalled()
     expect(openBrowser).not.toHaveBeenCalled()
     await torn.fiber.dispose()
+  })
+
+  it.each([
+    { id: 'webserver', announces: false },
+    { id: 'modules', announces: false },
+    { id: 'connection', announces: false },
+    { id: 'optional-tool', announces: true },
+  ])('announces readiness=$announces after the $id sibling fails', async ({ id, announces }) => {
+    stageDist()
+    const ctx = new Context()
+    onTestFinished(() => ctx.fiber.dispose())
+    ctx.baseUrl = 'file:///'
+    ctx.provide('webServer', fakeHttpServer().server)
+    provideConnection(ctx)
+    await ctx.plugin(Loader)
+    ctx.loader.builtins.failure = () => { throw new Error('sibling rejected') }
+    await ctx.loader.root.update([{ id, name: 'cordis:failure' }])
+    await ctx.loader.await()
+    await expect(ctx.loader.resolve(id).fiber?.await()).rejects.toThrow('sibling rejected')
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const openBrowser = vi.fn(async () => {})
+    internals.openBrowser = openBrowser
+    const audit = vi.spyOn(AppBoot, 'auditStartupEntries')
+    apply(ctx, new Config({ openBrowser: true, printUrl: true, surfaceContext: false, trustedHosts: [] }))
+    await vi.waitFor(() => { expect(audit).toHaveBeenCalledOnce() })
+    await Promise.allSettled(audit.mock.results.map(result => result.value as Promise<void>))
+    if (announces) {
+      expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
+      expect(openBrowser).toHaveBeenCalledWith('http://127.0.0.1:4567/?token=test-token')
+    } else {
+      expect(log).not.toHaveBeenCalled()
+      expect(openBrowser).not.toHaveBeenCalled()
+    }
   })
 
   it('fails loud when the prompt section resolves against a portless webserver', async () => {

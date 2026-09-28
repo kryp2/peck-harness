@@ -45,13 +45,12 @@ describe('scoped-dispatch invariants', () => {
       source: { kind: 'user' },
     })
     const agentRows = {
-      'agent/created': [{ agent }],
+      'agent/created': [{ agent, source: 'startup' }],
       'agent/disposed': [{ agent }],
       'agent/status': [{ agent, status: 'idle' }],
       'agent/inbox/inserted': [{ agent, message }],
       'agent/inbox/claimed': [{ agent, message, turn: 1 }],
       'agent/inbox/discarded': [{ agent, message }],
-      'agent/session-start': [{ agent, source: 'startup' }],
       'agent/pre-step': [{ agent, messages: [message], turn: 1, step: 1, signal }, () => Promise.resolve({ kind: 'enter', messages: [message] })],
       'agent/request': [{ agent, turn: 1, step: 1, signal }, () => Promise.resolve(config)],
       'agent/assistant-stream': [{
@@ -86,6 +85,8 @@ describe('scoped-dispatch invariants', () => {
       ['tools/pre-execute', [{ callId: 'c', name: 't', arguments: {}, agent }, () => Promise.resolve({ kind: 'allow' })]],
       ['tools/result', [{ callId: 'c', name: 't', arguments: {}, agent }, { content: [], isError: false }]],
       ['user-questions/request', [{ agent, questions: [] }, () => Promise.resolve({ answers: [] })]],
+      // Peck fork: the racing event answerers register on beside the waterfall.
+      ['user-questions/ask', [{ agent, questions: [] }, signal]],
     ]
 
     for (const [event, args] of rows) {
