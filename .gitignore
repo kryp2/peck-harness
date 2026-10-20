@@ -48,3 +48,6 @@ worktrees/
 .agents/worktrees/
 .typert-*/
 native/system/test/bin/
+
+# internal working notes (peck fork) - never track
+IN_FLIGHT.md
